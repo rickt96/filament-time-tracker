@@ -5,8 +5,10 @@ namespace App\Filament\Resources\TimeEntries\Pages;
 use App\Actions\Sync\SyncTimeEntryAction;
 use App\Actions\TimeEntry\CopyLastActivityAction;
 use App\Actions\TimeEntry\CopyPreviousDayAction;
+use App\Actions\TimeEntry\CreateTimeEntryAction;
 use App\Enums\TimeEntrySyncStatus;
 use App\Filament\Resources\TimeEntries\TimeEntryResource;
+use App\Models\TimeEntry;
 use App\Models\User;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
@@ -25,11 +27,10 @@ class ListTimeEntries extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Action::make('copyPreviousDay')
+            /* Action::make('copyPreviousDay')
                 ->label('Copia giorno precedente')
                 ->icon('heroicon-o-clipboard-document')
                 ->action(function () {
-                    /** @var User $user */
                     $user = Auth::user();
 
                     $copied = app(CopyPreviousDayAction::class)->handle($user, Carbon::today());
@@ -43,7 +44,6 @@ class ListTimeEntries extends ListRecords
                 ->label('Copia ultima attività')
                 ->icon('heroicon-o-clock')
                 ->action(function () {
-                    /** @var User $user */
                     $user = Auth::user();
 
                     $entry = app(CopyLastActivityAction::class)->handle($user);
@@ -74,8 +74,15 @@ class ListTimeEntries extends ListRecords
                     Notification::make()
                         ->title("Sincronizzazione completata: {$synced} riuscite, {$failed} fallite")
                         ->send();
+                }), */
+            CreateAction::make()
+                ->modal()
+                ->using(function (array $data): TimeEntry {
+                    /** @var User $user */
+                    $user = Auth::user();
+
+                    return app(CreateTimeEntryAction::class)->handle($user, CreateTimeEntry::normalize($data));
                 }),
-            CreateAction::make(),
         ];
     }
 }

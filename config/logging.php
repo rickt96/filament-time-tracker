@@ -123,6 +123,18 @@ return [
             'handler' => NullHandler::class,
         ],
 
+        // Raw request/response trail for external time-tracking sync
+        // providers (ClickUp, Jira, ...) — kept separate from the app log
+        // so sync activity can be audited/debugged without wading through
+        // unrelated noise. Every driver logs here, tagged with 'provider'.
+        'sync' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/sync.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => env('LOG_SYNC_DAYS', 30),
+            'replace_placeholders' => true,
+        ],
+
         'emergency' => [
             'path' => storage_path('logs/laravel.log'),
         ],

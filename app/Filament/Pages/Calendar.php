@@ -11,11 +11,13 @@ class Calendar extends Page
 {
     protected string $view = 'filament.pages.calendar';
 
+    protected static ?int $navigationSort = 20;
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCalendarDays;
 
-    protected static ?string $navigationLabel = 'Calendario';
+    protected static ?string $navigationLabel = 'Calendar';
 
-    protected static ?string $title = 'Calendario';
+    protected static ?string $title = 'Calendar';
 
     protected function getHeaderWidgets(): array
     {

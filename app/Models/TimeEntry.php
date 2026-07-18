@@ -32,7 +32,6 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $synced_at
  * @property TimeEntrySyncStatus|null $sync_status
  * @property string|null $sync_error
- * @property string|null $external_id
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
@@ -40,7 +39,7 @@ use Illuminate\Support\Carbon;
  */
 #[Fillable([
     'user_id', 'project_id', 'task_id', 'description', 'date', 'started_at', 'ended_at',
-    'duration_seconds', 'status', 'hourly_rate', 'total_amount', 'synced_at', 'sync_status', 'sync_error', 'external_id',
+    'duration_seconds', 'status', 'hourly_rate', 'total_amount', 'synced_at', 'sync_status', 'sync_error',
 ])]
 class TimeEntry extends Model implements Eventable
 {

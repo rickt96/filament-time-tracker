@@ -9,6 +9,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 
 class TaskForm
 {
@@ -41,9 +42,10 @@ class TaskForm
                 Select::make('assignee_id')
                     ->label('Assegnatario')
                     ->relationship('assignee', 'name')
+                    ->default(fn (): int|string|null => Auth::id())
                     ->searchable()
                     ->preload(),
-                TextInput::make('import_clickup_id')
+                TextInput::make('external_id')
                     ->label('ID esterno')
                     ->helperText('Identificativo del task nel sistema esterno (ClickUp, Jira). L\'app non crea task remoti: valorizzare questo campo associa manualmente il task locale a quello remoto.')
                     ->maxLength(255),

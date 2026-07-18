@@ -19,7 +19,7 @@ class WorkPackagesRelationManager extends RelationManager
 {
     protected static string $relationship = 'workPackages';
 
-    protected static ?string $title = 'Work Package';
+    protected static ?string $title = 'Pacchetti';
 
     public function form(Schema $schema): Schema
     {

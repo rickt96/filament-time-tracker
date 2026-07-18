@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
@@ -23,6 +24,7 @@ use Illuminate\Support\Carbon;
  * @property int $client_id
  * @property string $name
  * @property string|null $description
+ * @property string|null $note
  * @property string|null $color
  * @property ProjectStatus $status
  * @property ProjectVisibility $visibility
@@ -32,7 +34,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
  */
-#[Fillable(['workspace_id', 'client_id', 'name', 'description', 'color', 'status', 'visibility', 'budget_hours', 'hourly_rate'])]
+#[Fillable(['workspace_id', 'client_id', 'name', 'description', 'note', 'color', 'status', 'visibility', 'budget_hours', 'hourly_rate'])]
 class Project extends Model
 {
     /** @use HasFactory<ProjectFactory> */
@@ -87,6 +89,19 @@ class Project extends Model
     public function timeEntries(): HasMany
     {
         return $this->hasMany(TimeEntry::class);
+    }
+
+    /**
+     * Tasks don't belong to a Project directly, only through a Work
+     * Package — this aggregates them across all of the Project's Work
+     * Packages for display purposes (see ProjectResource's Tasks relation
+     * manager, which is read/edit only for the same reason).
+     *
+     * @return HasManyThrough<Task, WorkPackage, $this>
+     */
+    public function tasks(): HasManyThrough
+    {
+        return $this->hasManyThrough(Task::class, WorkPackage::class);
     }
 
     /**

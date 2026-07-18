@@ -18,8 +18,9 @@ class ClientForm
     {
         return $schema
             ->components([
-                Section::make('Dati cliente')
+                Section::make()
                     ->columns(2)
+                    ->columnSpanFull()
                     ->components([
                         TextInput::make('name')
                             ->label('Nome')
@@ -44,15 +45,25 @@ class ClientForm
                             ->columnSpanFull(),
                     ]),
                 Section::make('Sincronizzazione')
-                    ->description('Configurazione del provider esterno (ClickUp, Jira). La logica di sincronizzazione sarà attivata in una fase successiva.')
+                    ->description('Configurazione del provider esterno per la sincronizzazione delle attività.')
                     ->columns(2)
+                    ->columnSpanFull()
                     ->components([
                         Select::make('sync_driver')
                             ->label('Driver')
                             ->options(ClientSyncDriver::class)
-                            ->native(false),
+                            ->native(false)
+                            ->afterStateUpdated(function($set, $state) {
+                                if($state) {
+                                    $set("sync_configuration", $state->defaultConfig());
+                                } else {
+                                    $set("sync_configuration", null);
+                                }
+                            })
+                            ->live(),
                         KeyValue::make('sync_configuration')
                             ->label('Configurazione')
+                            ->visible(fn($get) => $get("sync_driver") != null)
                             ->columnSpanFull(),
                     ]),
             ]);

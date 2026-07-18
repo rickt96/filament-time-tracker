@@ -44,9 +44,15 @@ class TimeReportService
      */
     public function totalHours(Workspace $workspace, array $filters = []): float
     {
-        $seconds = $this->query($workspace, $filters)->sum('time_entries.duration_seconds');
+        return round($this->totalSeconds($workspace, $filters) / 3600, 2);
+    }
 
-        return round($seconds / 3600, 2);
+    /**
+     * @param  array<string, mixed>  $filters
+     */
+    public function totalSeconds(Workspace $workspace, array $filters = []): int
+    {
+        return (int) $this->query($workspace, $filters)->sum('time_entries.duration_seconds');
     }
 
     /**
@@ -82,14 +88,15 @@ class TimeReportService
     public function totalsByProject(Workspace $workspace, array $filters = []): Collection
     {
         return $this->query($workspace, $filters)
-            ->selectRaw('projects.id as project_id, projects.name as project_name, SUM(time_entries.duration_seconds) as total_seconds, SUM(time_entries.total_amount) as total_amount')
-            ->groupBy('projects.id', 'projects.name')
+            ->selectRaw('projects.id as project_id, projects.name as project_name, projects.color as project_color, SUM(time_entries.duration_seconds) as total_seconds, SUM(time_entries.total_amount) as total_amount')
+            ->groupBy('projects.id', 'projects.name', 'projects.color')
             ->orderByDesc('total_seconds')
             ->toBase()
             ->get()
             ->map(fn ($row) => [
                 'project_id' => (int) $row->project_id,
                 'project_name' => (string) $row->project_name,
+                'project_color' => (string) $row->project_color,
                 'hours' => round(((int) $row->total_seconds) / 3600, 2),
                 'amount' => number_format((float) ($row->total_amount ?? 0), 2, '.', ''),
             ]);
@@ -157,6 +164,43 @@ class TimeReportService
                 'hours' => round(((int) $row->total_seconds) / 3600, 2),
                 'amount' => number_format((float) ($row->total_amount ?? 0), 2, '.', ''),
             ]);
+    }
+
+    /**
+     * Per-project daily totals, in seconds — the shared shape behind the
+     * Summary report's stacked-by-project daily chart and the Weekly
+     * report's project x day matrix, so both read from one aggregation.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return Collection<int, array{project_id: int, project_name: string, client_name: string, color: ?string, days: array<string, int>, total_seconds: int}>
+     */
+    public function totalsByProjectAndDay(Workspace $workspace, array $filters = []): Collection
+    {
+        return $this->query($workspace, $filters)
+            ->leftJoin('clients', 'clients.id', '=', 'projects.client_id')
+            ->selectRaw('projects.id as project_id, projects.name as project_name, clients.name as client_name, projects.color as color, time_entries.date as entry_date, SUM(time_entries.duration_seconds) as total_seconds')
+            ->groupBy('projects.id', 'projects.name', 'clients.name', 'projects.color', 'time_entries.date')
+            ->toBase()
+            ->get()
+            ->groupBy('project_id')
+            ->map(function (Collection $rows) {
+                $first = $rows->first();
+
+                $days = $rows->mapWithKeys(fn ($row) => [
+                    Carbon::parse((string) $row->entry_date)->toDateString() => (int) $row->total_seconds,
+                ])->all();
+
+                return [
+                    'project_id' => (int) $first->project_id,
+                    'project_name' => (string) $first->project_name,
+                    'client_name' => (string) ($first->client_name ?? ''),
+                    'color' => $first->color,
+                    'days' => $days,
+                    'total_seconds' => array_sum($days),
+                ];
+            })
+            ->sortByDesc('total_seconds')
+            ->values();
     }
 
     /**

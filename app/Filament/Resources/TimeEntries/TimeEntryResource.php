@@ -26,9 +26,9 @@ class TimeEntryResource extends Resource
 {
     protected static ?string $model = TimeEntry::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClock;
+    protected static ?int $navigationSort = 10;
 
-    protected static ?int $navigationSort = -1;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClock;
 
     /**
      * TimeEntry has no direct workspace_id column — ownership flows through
@@ -48,7 +48,8 @@ class TimeEntryResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return TimeEntryForm::configure($schema);
+        //return TimeEntryForm::configure($schema);
+        return TimeEntryForm::configureRangeOnly($schema);
     }
 
     public static function table(Table $table): Table

@@ -43,14 +43,14 @@ class ProjectsTable
                     ->label('Stato')
                     ->badge()
                     ->sortable(),
-                TextColumn::make('budget_hours')
+                /* TextColumn::make('budget_hours')
                     ->label('Budget ore')
                     ->numeric()
                     ->sortable(),
                 TextColumn::make('hourly_rate')
                     ->label('Tariffa')
                     ->money('EUR')
-                    ->sortable(),
+                    ->sortable(), */
                 TextColumn::make('members_count')
                     ->label('Membri')
                     ->counts('members')
@@ -73,6 +73,7 @@ class ProjectsTable
             ->recordActions([
                 Action::make('toggleFavorite')
                     ->label(fn (Project $record): string => static::isFavorite($record) ? 'Rimuovi dai preferiti' : 'Aggiungi ai preferiti')
+                    ->hiddenLabel()
                     ->icon(fn (Project $record): string => static::isFavorite($record) ? 'heroicon-s-star' : 'heroicon-o-star')
                     ->color('warning')
                     ->action(function (Project $record): void {
@@ -82,8 +83,14 @@ class ProjectsTable
                         static::isFavorite($record)
                             ? $user->favoriteProjects()->detach($record)
                             : $user->favoriteProjects()->attach($record);
-                    }),
-                EditAction::make(),
+                    })
+                    ->successNotificationTitle(
+                        fn($record) => static::isFavorite($record) 
+                                            ? "Progetto {$record->name} aggiunto ai preferiti" 
+                                            : "Progetto {$record->name} rimosso dai preferiti"
+                    ),
+                EditAction::make()
+                    ->hiddenLabel(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

@@ -18,6 +18,7 @@ class TasksTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn($query) => $query->with("workPackage.project"))
             ->columns([
                 TextColumn::make('name')
                     ->label('Nome')
@@ -26,7 +27,8 @@ class TasksTable
                 TextColumn::make('workPackage.name')
                     ->label('Work Package')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->description(fn($record) => $record->workPackage?->project?->name, 'above'),
                 TextColumn::make('status')
                     ->label('Stato')
                     ->badge()
@@ -35,7 +37,7 @@ class TasksTable
                     ->label('Assegnatario')
                     ->searchable()
                     ->toggleable(),
-                TextColumn::make('import_clickup_id')
+                TextColumn::make('external_id')
                     ->label('ID esterno')
                     ->toggleable()
                     ->placeholder('—'),

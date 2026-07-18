@@ -17,6 +17,7 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use UnitEnum;
 
 /**
  * @extends resource<WorkPackage>
@@ -24,6 +25,10 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 class WorkPackageResource extends Resource
 {
     protected static ?string $model = WorkPackage::class;
+
+    protected static string|UnitEnum|null $navigationGroup = "Gestione";
+
+    protected static ?int $navigationSort = 100;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 

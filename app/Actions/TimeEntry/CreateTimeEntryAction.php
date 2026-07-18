@@ -26,7 +26,8 @@ class CreateTimeEntryAction
     {
         $project = Project::findOrFail((int) $data['project_id']);
 
-        $this->eligibility->assertProjectSelectable($project);
+        // TEMP IMPORT
+        //$this->eligibility->assertProjectSelectable($project);
 
         [$startedAt, $endedAt] = $this->calculator->resolveTimes($data);
 
@@ -36,10 +37,14 @@ class CreateTimeEntryAction
             ]);
         }
 
-        return DB::transaction(function () use ($user, $data, $project, $startedAt, $endedAt) {
-            $this->eligibility->assertNoOverlap($user->id, $startedAt, $endedAt);
+        $timeEntry = DB::transaction(function () use ($user, $data, $project, $startedAt, $endedAt) {
 
-            $task = filled($data['task_id'] ?? null) ? Task::find((int) $data['task_id']) : null;
+            // TEMP IMPORT
+            //$this->eligibility->assertNoOverlap($user->id, $startedAt, $endedAt);
+
+            $task = filled($data['task_id'] ?? null) 
+                        ? Task::find((int) $data['task_id']) 
+                        : null;
             $hourlyRate = $task?->workPackage?->effectiveHourlyRate() ?? $project->hourly_rate;
             $durationSeconds = $this->calculator->durationInSeconds($startedAt, $endedAt);
 
@@ -63,5 +68,7 @@ class CreateTimeEntryAction
 
             return $timeEntry;
         });
+
+        return $timeEntry;
     }
 }

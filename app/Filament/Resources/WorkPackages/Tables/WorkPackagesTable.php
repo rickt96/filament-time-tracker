@@ -8,6 +8,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
+use Filament\Support\Colors\Color;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
@@ -27,7 +28,9 @@ class WorkPackagesTable
                 TextColumn::make('project.name')
                     ->label('Progetto')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->color(fn($record) => Color::hex($record->project?->color))
+                    ->badge(),
                 TextColumn::make('status')
                     ->label('Stato')
                     ->badge()

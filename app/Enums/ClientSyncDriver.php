@@ -16,4 +16,17 @@ enum ClientSyncDriver: string implements HasLabel
             self::Jira => 'Jira',
         };
     }
+
+    public function defaultConfig(): array
+    {
+        return match ($this) {
+            self::ClickUp => [
+                "team" => "",
+                "api_key" => ""
+            ],
+            self::Jira => [
+                // TODO
+            ],
+        };
+    }
 }

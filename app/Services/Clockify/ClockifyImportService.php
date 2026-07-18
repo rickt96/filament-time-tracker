@@ -18,8 +18,10 @@ use App\Models\WorkPackage;
 use App\Models\Workspace;
 use Closure;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -190,10 +192,13 @@ class ClockifyImportService
             $hourlyRate = $this->rateToDecimalString($clockifyProject['hourlyRate'] ?? null);
 
             $project = Project::query()->firstOrCreate(
-                ['workspace_id' => $workspace->id, 'name' => $clockifyProject['name']],
+                [
+                    'workspace_id' => $workspace->id, 'name' => $clockifyProject['name']
+                ],
                 [
                     'client_id' => $client->id,
                     'color' => $clockifyProject['color'] ?? null,
+                    'note' => $clockifyProject['note'] ?? null,
                     'status' => ($clockifyProject['archived'] ?? false) ? ProjectStatus::Archived : ProjectStatus::Active,
                     'visibility' => ($clockifyProject['isPublic'] ?? true) ? ProjectVisibility::Public : ProjectVisibility::Private,
                     'hourly_rate' => $hourlyRate,
@@ -228,7 +233,7 @@ class ClockifyImportService
         $workPackagesByProject = [];
 
         foreach ($projectMap as $clockifyProjectId => $project) {
-            foreach ($this->client->tasks($clockifyWorkspaceId, $clockifyProjectId) as $clockifyTask) {
+            foreach ($this->fetchTasksWithCache($clockifyWorkspaceId, $clockifyProjectId) as $clockifyTask) {
                 $workPackagesByProject[$project->id] ??= WorkPackage::query()->firstOrCreate(
                     ['project_id' => $project->id, 'name' => self::DEFAULT_WORK_PACKAGE_NAME],
                     ['status' => WorkPackageStatus::InProgress, 'sort_order' => 0],
@@ -260,6 +265,31 @@ class ClockifyImportService
         $report($summary->tasksImported.' task importati.');
 
         return $map;
+    }
+
+    /**
+     * Clockify's task list is the slowest, most rate-limit-sensitive part of
+     * this import (one request per project) and is very unlikely to change
+     * between two runs of the same import — so once fetched for a project,
+     * the raw payload is cached to disk and reused on every later run
+     * (including repeated dry-runs used just to preview an import) instead
+     * of hitting the API again. Delete the file to force a refresh.
+     *
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function fetchTasksWithCache(string $clockifyWorkspaceId, string $clockifyProjectId): Collection
+    {
+        $path = "clockify-import/tasks/{$clockifyWorkspaceId}/{$clockifyProjectId}.json";
+
+        if (Storage::exists($path)) {
+            return collect(json_decode(Storage::get($path) ?? '[]', true));
+        }
+
+        $tasks = $this->client->tasks($clockifyWorkspaceId, $clockifyProjectId);
+
+        Storage::put($path, $tasks->toJson());
+
+        return $tasks;
     }
 
     /**

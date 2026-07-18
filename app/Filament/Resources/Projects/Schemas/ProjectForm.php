@@ -7,10 +7,13 @@ use App\Enums\ProjectVisibility;
 use App\Models\Project;
 use App\Services\Budget\BudgetUtilizationService;
 use Filament\Forms\Components\ColorPicker;
+use Filament\Forms\Components\MarkdownEditor;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\ToggleButtons;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Illuminate\Support\HtmlString;
@@ -21,9 +24,18 @@ class ProjectForm
     {
         return $schema
             ->components([
-                Section::make('Dati progetto')
-                    ->columns(2)
+                Section::make()
+                    ->columns(3)
+                    ->columnSpanFull()
                     ->components([
+                        TextInput::make('name')
+                            ->columnSpan(2)
+                            ->label('Nome')
+                            ->required()
+                            ->maxLength(255),
+                        ColorPicker::make('color')
+                            ->columnSpan(1)
+                            ->label('Colore'),
                         Select::make('client_id')
                             ->label('Cliente')
                             ->relationship(
@@ -34,28 +46,26 @@ class ProjectForm
                             ->searchable()
                             ->preload()
                             ->required(),
-                        TextInput::make('name')
-                            ->label('Nome')
-                            ->required()
-                            ->maxLength(255),
-                        Select::make('status')
-                            ->label('Stato')
-                            ->options(ProjectStatus::class)
-                            ->default(ProjectStatus::Active)
-                            ->required(),
-                        Select::make('visibility')
-                            ->label('Visibilità')
-                            ->options(ProjectVisibility::class)
-                            ->default(ProjectVisibility::Public)
-                            ->required(),
-                        ColorPicker::make('color')
-                            ->label('Colore'),
                         Textarea::make('description')
                             ->label('Descrizione')
                             ->maxLength(1000)
                             ->columnSpanFull(),
+                        ToggleButtons::make('status')
+                            ->label('Stato')
+                            ->options(ProjectStatus::class)
+                            ->default(ProjectStatus::Active)
+                            ->inline()
+                            ->required(),
+                        ToggleButtons::make('visibility')
+                            ->label('Visibilità')
+                            ->options(ProjectVisibility::class)
+                            ->default(ProjectVisibility::Public)
+                            ->inline()
+                            ->required()
                     ]),
-                Section::make('Budget')
+
+                // budget lo impostiamo a livello di workpackage
+                /* Section::make('Budget')
                     ->columns(2)
                     ->components([
                         TextInput::make('budget_hours')
@@ -66,8 +76,10 @@ class ProjectForm
                             ->label('Tariffa oraria')
                             ->numeric()
                             ->prefix('€'),
-                    ]),
-                Section::make('Dashboard budget')
+                    ]), */
+
+                // va spostato da un'altra parte
+                /* Section::make('Dashboard budget')
                     ->visible(fn (?Project $record): bool => $record !== null)
                     ->columns(3)
                     ->components([
@@ -147,7 +159,14 @@ class ProjectForm
 
                                 return $snapshot->economicBudgetRemaining !== null ? "€ {$snapshot->economicBudgetRemaining}" : '—';
                             }),
-                    ]),
+                    ]),*/
+
+                /* Section::make('Note')
+                    ->schema([
+                        Textarea::make('note')
+                            ->hiddenLabel()
+                            ->columnSpanFull(),
+                    ]) */
             ]);
     }
 }

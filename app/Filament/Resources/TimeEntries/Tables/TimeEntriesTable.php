@@ -4,11 +4,15 @@ namespace App\Filament\Resources\TimeEntries\Tables;
 
 use App\Actions\Sync\SyncTimeEntryAction;
 use App\Actions\TimeEntry\DuplicateTimeEntryAction;
+use App\Actions\TimeEntry\UpdateTimeEntryAction;
 use App\Enums\TimeEntrySyncStatus;
 use App\Models\TimeEntry;
+use App\Support\DurationFormatter;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
@@ -28,6 +32,7 @@ use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Number;
 
 class TimeEntriesTable
 {
@@ -40,7 +45,7 @@ class TimeEntriesTable
             // getTableGrouping() always falls back to this default.
             ->defaultGroup(
                 Group::make('date')
-                    ->label('Data')
+                    ->label('')
                     ->date()
                     // Forced regardless of $direction: the grouping-direction
                     // toggle is meaningless with no alternative groups to pick
@@ -54,16 +59,22 @@ class TimeEntriesTable
             ->modifyQueryUsing(fn (Builder $query) => $query->with(['project.client', 'task', 'user', 'tags']))
             ->columns([
                 TextInputColumn::make('description')
-                    ->label('Descrizione')
-                    ->placeholder('Aggiungi descrizione'),
+                    ->label('')
+                    ->placeholder('Aggiungi descrizione')
+                    ->tooltip(fn($state) => $state)
+                    ->afterStateUpdated(function() {
+                        Notification::make()
+                            ->success()
+                            ->title('Descrizione aggiornata')
+                            ->send();
+                    }),
                 TextColumn::make('project.name')
-                    ->label('Progetto')
+                    ->label('')
                     ->getStateUsing(fn (TimeEntry $record): string => "{$record->project->name} ({$record->client->name})")
                     ->color(fn($record) => Color::hex($record->project?->color))
-                    ->badge()
-                    ->searchable(),
+                    ->badge(),
                 SelectColumn::make('task_id')
-                    ->label('Task')
+                    ->label('')
                     ->optionsRelationship(
                         name: 'task',
                         titleAttribute: 'name',
@@ -74,14 +85,14 @@ class TimeEntriesTable
                     )
                     ->placeholder('—'),
                 TextColumn::make('started_at')
-                    ->label('Orario')
+                    ->label('')
                     ->getStateUsing(fn (TimeEntry $record): string => $record->started_at->format('H:i').' - '.($record->ended_at?->format('H:i') ?? '…')),
                 TextColumn::make('duration_seconds')
-                    ->label('Durata (ore)')
-                    ->formatStateUsing(fn (int $state): string => number_format($state / 3600, 2)),
+                    ->label('')
+                    ->formatStateUsing(fn (int $state): string => DurationFormatter::hoursMinutesSeconds($state) /* Number::format(($state / 3600), 2) */),
             ])
             ->filters([
-                Filter::make('date_range')
+                /* Filter::make('date_range')
                     ->label('Intervallo date')
                     ->schema([
                         DatePicker::make('from')->label('Dal'),
@@ -118,40 +129,53 @@ class TimeEntriesTable
                 SelectFilter::make('sync_status')
                     ->label('Stato sincronizzazione')
                     ->options(TimeEntrySyncStatus::class),
-                TrashedFilter::make(),
+                TrashedFilter::make(), */
             ])
             ->recordActions([
-                EditAction::make(),
-                Action::make('duplicate')
-                    ->label('Duplica')
-                    ->icon('heroicon-o-document-duplicate')
-                    ->action(function (TimeEntry $record) {
-                        app(DuplicateTimeEntryAction::class)->handle($record);
+                ActionGroup::make([
+                    EditAction::make()
+                        ->modal()
+                        ->mutateRecordDataUsing(function (array $data, TimeEntry $record): array {
+                            $data['started_at'] = $record->started_at->format('H:i');
+                            $data['ended_at'] = $record->ended_at?->format('H:i');
 
-                        Notification::make()
-                            ->title('Time entry duplicato su oggi')
-                            ->success()
-                            ->send();
-                    }),
-                Action::make('sync')
-                    ->label('Sincronizza')
-                    ->icon('heroicon-o-arrow-path')
-                    ->visible(fn (TimeEntry $record): bool => filled($record->task?->import_clickup_id) && $record->project->client->sync_driver !== null)
-                    ->action(function (TimeEntry $record) {
-                        $synced = app(SyncTimeEntryAction::class)->handle($record);
+                            return $data;
+                        })
+                        ->using(fn (TimeEntry $record, array $data): TimeEntry => app(UpdateTimeEntryAction::class)
+                            ->handle($record, $data)),
+                    Action::make('duplicate')
+                        ->label('Duplica')
+                        ->icon('heroicon-o-document-duplicate')
+                        ->action(function (TimeEntry $record) {
+                            app(DuplicateTimeEntryAction::class)->handle($record);
 
-                        $notification = Notification::make()->title(
+                            Notification::make()
+                                ->title('Time entry duplicato')
+                                ->success()
+                                ->send();
+                        }),
+                    Action::make('sync')
+                        ->label('Sincronizza')
+                        ->icon('heroicon-o-arrow-path')
+                        ->visible(fn (TimeEntry $record): bool => filled($record->task?->import_clickup_id) && $record->project->client->sync_driver !== null)
+                        ->action(function (TimeEntry $record) {
+                            $synced = app(SyncTimeEntryAction::class)->handle($record);
+
+                            $notification = Notification::make()->title(
+                                $synced->sync_status === TimeEntrySyncStatus::Synced
+                                    ? 'Time entry sincronizzato'
+                                    : "Sincronizzazione fallita: {$synced->sync_error}",
+                            );
+
                             $synced->sync_status === TimeEntrySyncStatus::Synced
-                                ? 'Time entry sincronizzato'
-                                : "Sincronizzazione fallita: {$synced->sync_error}",
-                        );
+                                ? $notification->success()
+                                : $notification->danger();
 
-                        $synced->sync_status === TimeEntrySyncStatus::Synced
-                            ? $notification->success()
-                            : $notification->danger();
-
-                        $notification->send();
-                    }),
+                            $notification->send();
+                        }),
+                    DeleteAction::make()
+                ])
+                
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

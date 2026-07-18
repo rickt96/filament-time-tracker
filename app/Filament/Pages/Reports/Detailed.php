@@ -10,10 +10,9 @@ use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\WorkPackage;
 use App\Models\Workspace;
-use App\Services\Reports\ProjectBudgetComparisonRow;
 use App\Services\Reports\TimeReportService;
+use App\Support\DurationFormatter;
 use BackedEnum;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
@@ -21,19 +20,30 @@ use Filament\Forms\Components\Select;
 use Filament\Pages\Page;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Concerns\InteractsWithTable;
+use Filament\Tables\Contracts\HasTable;
+use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Facades\Excel;
+use UnitEnum;
 
-class TimeReport extends Page
+class Detailed extends Page implements HasTable
 {
-    protected string $view = 'filament.pages.reports.time-report';
+    use InteractsWithTable;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedChartBar;
+    protected string $view = 'filament.pages.reports.detailed';
 
-    protected static ?string $navigationLabel = 'Report';
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedListBullet;
 
-    protected static ?string $title = 'Report';
+    protected static string|UnitEnum|null $navigationGroup = 'Report';
+
+    protected static ?int $navigationSort = 31;
+
+    protected static ?string $navigationLabel = 'Dettagliato';
+
+    protected static ?string $title = 'Report — Dettagliato';
 
     /**
      * @var array<string, mixed>|null
@@ -96,100 +106,58 @@ class TimeReport extends Page
             ]);
     }
 
+    public function table(Table $table): Table
+    {
+        return $table
+            ->query(fn (): Builder => app(TimeReportService::class)
+                ->query($this->workspace(), $this->filters ?? [])
+                ->select('time_entries.*'))
+            ->defaultSort('started_at', 'desc')
+            ->columns([
+                TextColumn::make('date')
+                    ->label('Data')
+                    ->date()
+                    ->sortable(),
+                TextColumn::make('description')
+                    ->label('Descrizione')
+                    ->placeholder('—')
+                    ->wrap(),
+                TextColumn::make('project.name')
+                    ->label('Progetto')
+                    ->getStateUsing(fn (TimeEntry $record): string => "{$record->project->name} ({$record->client->name})")
+                    ->searchable(),
+                TextColumn::make('task.name')
+                    ->label('Task')
+                    ->placeholder('—'),
+                TextColumn::make('user.name')
+                    ->label('Utente')
+                    ->searchable(),
+                TextColumn::make('started_at')
+                    ->label('Orario')
+                    ->getStateUsing(fn (TimeEntry $record): string => $record->started_at->format('H:i').' - '.($record->ended_at?->format('H:i') ?? '…')),
+                TextColumn::make('duration_seconds')
+                    ->label('Durata')
+                    ->formatStateUsing(fn (int $state): string => DurationFormatter::hoursMinutesSeconds($state))
+                    ->sortable(),
+            ])
+            ->paginated([25, 50, 100]);
+    }
+
     protected function getHeaderActions(): array
     {
         return [
             Action::make('exportSpreadsheet')
                 ->label('Esporta CSV/Excel')
                 ->icon('heroicon-o-table-cells')
-                ->action(fn () => Excel::download(new TimeEntriesExport($this->filteredEntries()), 'report-ore.xlsx')),
-            Action::make('exportPdf')
-                ->label('Esporta PDF')
-                ->icon('heroicon-o-document-text')
-                ->action(fn () => Pdf::loadView('reports.time-report-pdf', [
-                    'totalHours' => $this->getTotalHours(),
-                    'averageRate' => $this->getAverageRate(),
-                    'byProject' => $this->getTotalsByProject(),
-                    'byClient' => $this->getTotalsByClient(),
-                    'byUser' => $this->getTotalsByUser(),
-                    'byWorkPackage' => $this->getTotalsByWorkPackage(),
-                    'budgetComparison' => $this->getBudgetComparison(),
-                ])->download('report-ore.pdf')),
+                ->action(fn () => Excel::download(new TimeEntriesExport($this->filteredEntries()), 'report-dettagliato.xlsx')),
         ];
     }
 
-    public function getTotalHours(): float
+    public function getTotalDuration(): string
     {
-        return app(TimeReportService::class)->totalHours($this->workspace(), $this->filters ?? []);
-    }
-
-    public function getAverageRate(): ?string
-    {
-        return app(TimeReportService::class)->averageRate($this->workspace(), $this->filters ?? []);
-    }
-
-    /**
-     * @return Collection<int, array{project_id: int, project_name: string, hours: float, amount: string}>
-     */
-    public function getTotalsByProject(): Collection
-    {
-        return app(TimeReportService::class)->totalsByProject($this->workspace(), $this->filters ?? []);
-    }
-
-    /**
-     * @return Collection<int, array{client_id: int, client_name: string, hours: float, amount: string}>
-     */
-    public function getTotalsByClient(): Collection
-    {
-        return app(TimeReportService::class)->totalsByClient($this->workspace(), $this->filters ?? []);
-    }
-
-    /**
-     * @return Collection<int, array{user_id: int, user_name: string, hours: float, amount: string}>
-     */
-    public function getTotalsByUser(): Collection
-    {
-        return app(TimeReportService::class)->totalsByUser($this->workspace(), $this->filters ?? []);
-    }
-
-    /**
-     * @return Collection<int, array{work_package_id: int, work_package_name: string, hours: float, amount: string}>
-     */
-    public function getTotalsByWorkPackage(): Collection
-    {
-        return app(TimeReportService::class)->totalsByWorkPackage($this->workspace(), $this->filters ?? []);
-    }
-
-    /**
-     * @return Collection<int, ProjectBudgetComparisonRow>
-     */
-    public function getBudgetComparison(): Collection
-    {
-        return app(TimeReportService::class)->budgetComparisonByProject($this->workspace(), $this->filters ?? []);
-    }
-
-    /**
-     * @return array<string, float>
-     */
-    public function getTotalsByDay(): array
-    {
-        return app(TimeReportService::class)->totalsByDay($this->workspace(), $this->filters ?? []);
-    }
-
-    /**
-     * @return array<string, float>
-     */
-    public function getTotalsByWeek(): array
-    {
-        return app(TimeReportService::class)->totalsByWeek($this->workspace(), $this->filters ?? []);
-    }
-
-    /**
-     * @return array<string, float>
-     */
-    public function getTotalsByMonth(): array
-    {
-        return app(TimeReportService::class)->totalsByMonth($this->workspace(), $this->filters ?? []);
+        return DurationFormatter::hoursMinutesSeconds(
+            app(TimeReportService::class)->totalSeconds($this->workspace(), $this->filters ?? []),
+        );
     }
 
     /**

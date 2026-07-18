@@ -13,6 +13,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
+use Filament\Support\Colors\Color;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -52,7 +53,9 @@ class ProjectsRelationManager extends RelationManager
             ->columns([
                 TextColumn::make('name')
                     ->label('Nome')
-                    ->searchable(),
+                    ->searchable()
+                    ->color(fn($record) => Color::hex($record->color))
+                    ->badge(),
                 TextColumn::make('status')
                     ->label('Stato')
                     ->badge(),

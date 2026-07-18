@@ -36,8 +36,8 @@ return [
     ],
 
     'clockify' => [
+        'base_url' => 'https://api.clockify.me/api/v1',
         'api_key' => env('CLOCKIFY_API_KEY'),
-        'base_url' => env('CLOCKIFY_BASE_URL', 'https://api.clockify.me/api/v1'),
     ],
 
 ];
