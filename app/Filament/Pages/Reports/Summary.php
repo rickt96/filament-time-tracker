@@ -188,7 +188,7 @@ class Summary extends Page
     }
 
     /**
-     * @return Collection<int, array{work_package_id: int, work_package_name: string, hours: float, amount: string}>
+     * @return Collection<int, array{work_package_id: int|null, work_package_name: string, hours: float, amount: string}>
      */
     public function getTotalsByWorkPackage(): Collection
     {

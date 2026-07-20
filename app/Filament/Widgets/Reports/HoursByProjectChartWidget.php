@@ -24,6 +24,14 @@ class HoursByProjectChartWidget extends ChartWidget
         return "Totale ore: -";
     } */
 
+    /**
+     * When true (set via WidgetConfiguration on the hosting page — the
+     * Dashboard does this, the Summary report does not), the chart renders
+     * empty until both 'from' and 'until' are explicitly present in the
+     * page filters, instead of silently falling back to an all-time query.
+     */
+    public bool $requireDateRangeFilter = false;
+
     protected function getType(): string
     {
         return 'bar';
@@ -38,6 +46,12 @@ class HoursByProjectChartWidget extends ChartWidget
      */
     protected function getData(): array
     {
+        if ($this->isDateRangeFilterMissing()) {
+            $this->heading = null;
+
+            return ['datasets' => [], 'labels' => []];
+        }
+
         $rows = app(TimeReportService::class)->totalsByProjectAndDay($this->workspace(), $this->pageFilters ?? []);
 
         $this->heading = "Totale ore: " . ($rows->sum("total_seconds") / 3600);
@@ -69,6 +83,11 @@ class HoursByProjectChartWidget extends ChartWidget
                 'y' => ['stacked' => true],
             ],
         ];
+    }
+
+    private function isDateRangeFilterMissing(): bool
+    {
+        return blank($this->pageFilters['from'] ?? null) || blank($this->pageFilters['until'] ?? null);
     }
 
     private function workspace(): Workspace

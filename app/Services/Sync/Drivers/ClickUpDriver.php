@@ -36,7 +36,7 @@ class ClickUpDriver implements SyncDriverInterface
 
     public function syncTimeEntry(TimeEntry $timeEntry): SyncResult
     {
-        $taskId = $timeEntry->task?->import_clickup_id;
+        $taskId = $timeEntry->task?->external_id;
         $startedAt = $timeEntry->started_at;
         $endedAt = $timeEntry->ended_at;
 

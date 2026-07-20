@@ -157,7 +157,7 @@ class TimeEntriesTable
                     Action::make('sync')
                         ->label('Sincronizza')
                         ->icon('heroicon-o-arrow-path')
-                        ->visible(fn (TimeEntry $record): bool => filled($record->task?->import_clickup_id) && $record->project->client->sync_driver !== null)
+                        ->visible(fn (TimeEntry $record): bool => filled($record->task?->external_id) && $record->project->client->sync_driver !== null)
                         ->action(function (TimeEntry $record) {
                             $synced = app(SyncTimeEntryAction::class)->handle($record);
 

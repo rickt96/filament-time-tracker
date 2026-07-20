@@ -57,6 +57,14 @@ class WorkPackage extends Model
     }
 
     /**
+     * @return HasMany<TimeEntry, $this>
+     */
+    public function timeEntries(): HasMany
+    {
+        return $this->hasMany(TimeEntry::class);
+    }
+
+    /**
      * The hourly rate to apply to new Time Entries under this Work Package:
      * its own rate if set, otherwise the parent Project's rate.
      */

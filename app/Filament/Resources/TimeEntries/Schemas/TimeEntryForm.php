@@ -4,6 +4,7 @@ namespace App\Filament\Resources\TimeEntries\Schemas;
 
 use App\Enums\ProjectStatus;
 use App\Models\Project;
+use App\Models\Task;
 use App\Models\WorkPackage;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
@@ -156,24 +157,50 @@ class TimeEntryForm
                 ->preload()
                 ->live()
                 ->required()
-                ->afterStateUpdated(fn ($set) => $set('task_id', null)),
+                ->afterStateUpdated(function ($set) {
+                    $set('work_package_id', null);
+                    $set('task_id', null);
+                }),
             // includo il cliente nel progetto
             /* Placeholder::make('client')
                 ->label('Cliente')
                 ->content(fn (Get $get): string => Project::find((int) ($get('project_id') ?? 0))?->client->name ?? '—'), */
+            Select::make('work_package_id')
+                ->inlineLabel()
+                ->label('Work Package')
+                ->relationship(
+                    name: 'workPackage',
+                    titleAttribute: 'name',
+                    modifyQueryUsing: fn (Builder $query, Get $get) => $query->where('project_id', $get('project_id')),
+                )
+                ->searchable()
+                ->preload()
+                ->live()
+                ->disabled(fn (Get $get): bool => blank($get('project_id')) || filled($get('task_id')))
+                ->dehydrated()
+                ->afterStateUpdated(fn ($set) => $set('task_id', null)),
             Select::make('task_id')
                 ->inlineLabel()
                 ->label('Task')
                 ->relationship(
                     name: 'task',
                     titleAttribute: 'name',
-                    modifyQueryUsing: fn (Builder $query, Get $get) => $query->whereHas(
-                        'workPackage',
-                        fn (Builder $query) => $query->where('project_id', $get('project_id')),
-                    ),
+                    modifyQueryUsing: fn (Builder $query, Get $get) => $query->where('work_package_id', $get('work_package_id')),
                 )
                 ->searchable()
                 ->preload()
+                ->live()
+                ->disabled(fn (Get $get): bool => blank($get('work_package_id')))
+                ->dehydrated()
+                ->afterStateUpdated(function ($state, $set) {
+                    // Only derive the Work Package when a Task is picked — clearing
+                    // the Task should merely unlock the field again (its disabled()
+                    // condition depends on task_id), not wipe out the Work Package
+                    // the entry is still logically under.
+                    if (filled($state)) {
+                        $set('work_package_id', Task::find((int) $state)?->work_package_id);
+                    }
+                })
                 ->createOptionForm(fn (): array => [
                     Select::make('work_package_id')
                         ->label('Work Package')

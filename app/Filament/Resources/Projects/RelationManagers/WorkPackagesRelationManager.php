@@ -3,6 +3,8 @@
 namespace App\Filament\Resources\Projects\RelationManagers;
 
 use App\Enums\WorkPackageStatus;
+use App\Filament\Support\WorkPackageBudgetColumn;
+use App\Models\WorkPackage;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
@@ -62,9 +64,11 @@ class WorkPackagesRelationManager extends RelationManager
                 TextColumn::make('status')
                     ->label('Stato')
                     ->badge(),
-                TextColumn::make('budget_hours')
-                    ->label('Budget ore')
-                    ->numeric(),
+                TextColumn::make('hourly_rate')
+                    ->label('Tariffa oraria')
+                    ->getStateUsing(fn (WorkPackage $record): ?string => $record->effectiveHourlyRate())
+                    ->money('EUR'),
+                ...WorkPackageBudgetColumn::make(),
             ])
             ->headerActions([
                 CreateAction::make(),

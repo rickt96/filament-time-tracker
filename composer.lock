@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "4ef20c627898ea7b204d20bfaf4a7c78",
+    "content-hash": "25c2df418193ac806180c951f4eb102b",
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
@@ -950,6 +950,71 @@
                 "source": "https://github.com/DASPRiD/Enum/tree/1.0.7"
             },
             "time": "2025-09-16T12:23:56+00:00"
+        },
+        {
+            "name": "devletes/filament-progress-bar",
+            "version": "v1.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/devletes/filament-progress-bar.git",
+                "reference": "7fc25caa68770eb994ccd379ca02893b97452df6"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/devletes/filament-progress-bar/zipball/7fc25caa68770eb994ccd379ca02893b97452df6",
+                "reference": "7fc25caa68770eb994ccd379ca02893b97452df6",
+                "shasum": ""
+            },
+            "require": {
+                "filament/filament": "^5.0",
+                "php": "^8.2",
+                "spatie/laravel-package-tools": "^1.16"
+            },
+            "require-dev": {
+                "laravel/pint": "^1.18",
+                "orchestra/testbench": "^9.0|^10.0",
+                "pestphp/pest": "^3.8",
+                "pestphp/pest-plugin-laravel": "^3.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Devletes\\FilamentProgressBar\\ProgressBarServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Devletes\\FilamentProgressBar\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Devletes",
+                    "email": "packages@devletes.com"
+                }
+            ],
+            "description": "Reusable progress bar components for Filament 5 tables and infolists.",
+            "homepage": "https://github.com/devletes/filament-progress-bar",
+            "keywords": [
+                "filament",
+                "filament-plugin",
+                "infolist",
+                "laravel",
+                "progress",
+                "progress-bar",
+                "table-column"
+            ],
+            "support": {
+                "issues": "https://github.com/devletes/filament-progress-bar/issues",
+                "source": "https://github.com/devletes/filament-progress-bar"
+            },
+            "time": "2026-04-27T02:16:00+00:00"
         },
         {
             "name": "dflydev/dot-access-data",

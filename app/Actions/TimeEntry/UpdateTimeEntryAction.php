@@ -3,6 +3,7 @@
 namespace App\Actions\TimeEntry;
 
 use App\Models\Project;
+use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Services\TimeEntryCalculator;
 use App\Services\TimeEntryEligibilityService;
@@ -39,12 +40,25 @@ class UpdateTimeEntryAction
 
             $durationSeconds = $this->calculator->durationInSeconds($startedAt, $endedAt);
 
+            // A Task always pins down its own Work Package, so whenever task_id
+            // is being touched, work_package_id is re-derived from it rather than
+            // trusted verbatim from the caller — keeping the two consistent even
+            // if the submitted payload disagreed.
+            if (array_key_exists('task_id', $data)) {
+                $task = filled($data['task_id']) ? Task::find((int) $data['task_id']) : null;
+                $workPackageId = $task?->work_package_id
+                    ?? (array_key_exists('work_package_id', $data) ? $data['work_package_id'] : null);
+            } else {
+                $workPackageId = array_key_exists('work_package_id', $data) ? $data['work_package_id'] : $timeEntry->work_package_id;
+            }
+
             // hourly_rate is intentionally never re-derived here: it was copied
             // from the Project/WorkPackage once at creation time and stays fixed,
             // so historical costs never shift when rates change later.
             $timeEntry->update([
                 'project_id' => $project->id,
                 'task_id' => array_key_exists('task_id', $data) ? $data['task_id'] : $timeEntry->task_id,
+                'work_package_id' => $workPackageId,
                 'description' => array_key_exists('description', $data) ? $data['description'] : $timeEntry->description,
                 'date' => $startedAt->toDateString(),
                 'started_at' => $startedAt,

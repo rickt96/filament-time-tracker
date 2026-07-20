@@ -3,6 +3,8 @@
 namespace App\Filament\Resources\WorkPackages\Tables;
 
 use App\Enums\WorkPackageStatus;
+use App\Filament\Support\WorkPackageBudgetColumn;
+use App\Models\WorkPackage;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -35,10 +37,12 @@ class WorkPackagesTable
                     ->label('Stato')
                     ->badge()
                     ->sortable(),
-                TextColumn::make('budget_hours')
-                    ->label('Budget ore')
-                    ->numeric()
+                TextColumn::make('hourly_rate')
+                    ->label('Tariffa oraria')
+                    ->getStateUsing(fn (WorkPackage $record): ?string => $record->effectiveHourlyRate())
+                    ->money('EUR')
                     ->sortable(),
+                ...WorkPackageBudgetColumn::make(),
                 TextColumn::make('tasks_count')
                     ->label('Task')
                     ->counts('tasks')

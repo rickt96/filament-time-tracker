@@ -20,12 +20,12 @@ use Illuminate\Support\Carbon;
  * @property TaskStatus $status
  * @property int|null $assignee_id
  * @property string|null $external_id
- * @property string|null $import_clickup_id
+ * @property string|null $import_old_id
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
  */
-#[Fillable(['work_package_id', 'name', 'description', 'status', 'assignee_id', 'external_id', 'import_clickup_id'])]
+#[Fillable(['work_package_id', 'name', 'description', 'status', 'assignee_id', 'external_id', 'import_old_id'])]
 class Task extends Model
 {
     /** @use HasFactory<TaskFactory> */

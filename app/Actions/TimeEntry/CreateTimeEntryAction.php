@@ -7,6 +7,7 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\User;
+use App\Models\WorkPackage;
 use App\Services\TimeEntryCalculator;
 use App\Services\TimeEntryEligibilityService;
 use Illuminate\Support\Facades\DB;
@@ -42,16 +43,23 @@ class CreateTimeEntryAction
             // TEMP IMPORT
             //$this->eligibility->assertNoOverlap($user->id, $startedAt, $endedAt);
 
-            $task = filled($data['task_id'] ?? null) 
-                        ? Task::find((int) $data['task_id']) 
+            $task = filled($data['task_id'] ?? null)
+                        ? Task::find((int) $data['task_id'])
                         : null;
-            $hourlyRate = $task?->workPackage?->effectiveHourlyRate() ?? $project->hourly_rate;
+
+            // A Task always pins down its own Work Package; only fall back to
+            // an explicitly submitted work_package_id when there's no Task.
+            $workPackage = $task?->workPackage
+                ?? (filled($data['work_package_id'] ?? null) ? WorkPackage::find((int) $data['work_package_id']) : null);
+
+            $hourlyRate = $workPackage?->effectiveHourlyRate() ?? $project->hourly_rate;
             $durationSeconds = $this->calculator->durationInSeconds($startedAt, $endedAt);
 
             $timeEntry = TimeEntry::create([
                 'user_id' => $user->id,
                 'project_id' => $project->id,
                 'task_id' => $task?->id,
+                'work_package_id' => $workPackage?->id,
                 'description' => $data['description'] ?? null,
                 'date' => $startedAt->toDateString(),
                 'started_at' => $startedAt,

@@ -15,7 +15,8 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->string('status')->default('todo');
             $table->foreignId('assignee_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->string('external_id')->nullable();
+            $table->string('external_id')->nullable(); // id risorsa gestionale esterno (es. Clickup)
+            $table->string('import_old_id')->nullable(); // id task importato (es. Clockify)
             $table->timestamps();
             $table->softDeletes();
         });

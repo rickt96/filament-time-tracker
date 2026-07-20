@@ -35,7 +35,7 @@ class TimeReportService
             )
             ->when(
                 $filters['work_package_id'] ?? null,
-                fn (Builder $query, $value) => $query->whereHas('task', fn (Builder $query) => $query->where('work_package_id', $value)),
+                fn (Builder $query, $value) => $query->where('time_entries.work_package_id', $value),
             );
     }
 
@@ -145,21 +145,25 @@ class TimeReportService
     }
 
     /**
+     * Left-joined on work_package_id (rather than hopping through tasks) so
+     * entries logged directly under a Work Package — or under none at all —
+     * are represented too: a null id groups into a "Nessun pacchetto" row
+     * instead of silently disappearing from the breakdown.
+     *
      * @param  array<string, mixed>  $filters
-     * @return Collection<int, array{work_package_id: int, work_package_name: string, hours: float, amount: string}>
+     * @return Collection<int, array{work_package_id: int|null, work_package_name: string, hours: float, amount: string}>
      */
     public function totalsByWorkPackage(Workspace $workspace, array $filters = []): Collection
     {
         return $this->query($workspace, $filters)
-            ->join('tasks', 'tasks.id', '=', 'time_entries.task_id')
-            ->join('work_packages', 'work_packages.id', '=', 'tasks.work_package_id')
-            ->selectRaw('work_packages.id as work_package_id, work_packages.name as work_package_name, SUM(time_entries.duration_seconds) as total_seconds, SUM(time_entries.total_amount) as total_amount')
+            ->leftJoin('work_packages', 'work_packages.id', '=', 'time_entries.work_package_id')
+            ->selectRaw("work_packages.id as work_package_id, COALESCE(work_packages.name, 'Nessun pacchetto') as work_package_name, SUM(time_entries.duration_seconds) as total_seconds, SUM(time_entries.total_amount) as total_amount")
             ->groupBy('work_packages.id', 'work_packages.name')
             ->orderByDesc('total_seconds')
             ->toBase()
             ->get()
             ->map(fn ($row) => [
-                'work_package_id' => (int) $row->work_package_id,
+                'work_package_id' => $row->work_package_id !== null ? (int) $row->work_package_id : null,
                 'work_package_name' => (string) $row->work_package_name,
                 'hours' => round(((int) $row->total_seconds) / 3600, 2),
                 'amount' => number_format((float) ($row->total_amount ?? 0), 2, '.', ''),

@@ -30,6 +30,8 @@ class TimeEntryResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClock;
 
+    protected static ?string $navigationLabel = "Time tracker";
+
     /**
      * TimeEntry has no direct workspace_id column — ownership flows through
      * project.workspace_id, so tenant scoping is applied manually below instead

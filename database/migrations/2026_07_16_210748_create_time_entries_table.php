@@ -12,6 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->foreignId('project_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('work_package_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('task_id')->nullable()->constrained()->nullOnDelete();
             $table->text('description')->nullable();
             $table->date('date');
@@ -21,6 +22,7 @@ return new class extends Migration
             $table->string('status')->default('completed');
             $table->decimal('hourly_rate', 10, 2)->nullable();
             $table->decimal('total_amount', 10, 2)->nullable();
+            $table->string('external_id')->nullable();
             $table->timestamp('synced_at')->nullable();
             $table->string('sync_status')->nullable();
             $table->text('sync_error')->nullable();

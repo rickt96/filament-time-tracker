@@ -21,6 +21,7 @@ use Illuminate\Support\Carbon;
  * @property int $user_id
  * @property int $project_id
  * @property int|null $task_id
+ * @property int|null $work_package_id
  * @property string|null $description
  * @property Carbon $date
  * @property Carbon $started_at
@@ -38,7 +39,7 @@ use Illuminate\Support\Carbon;
  * @property-read Client|null $client
  */
 #[Fillable([
-    'user_id', 'project_id', 'task_id', 'description', 'date', 'started_at', 'ended_at',
+    'user_id', 'project_id', 'task_id', 'work_package_id', 'description', 'date', 'started_at', 'ended_at',
     'duration_seconds', 'status', 'hourly_rate', 'total_amount', 'synced_at', 'sync_status', 'sync_error',
 ])]
 class TimeEntry extends Model implements Eventable
@@ -82,6 +83,14 @@ class TimeEntry extends Model implements Eventable
     public function task(): BelongsTo
     {
         return $this->belongsTo(Task::class);
+    }
+
+    /**
+     * @return BelongsTo<WorkPackage, $this>
+     */
+    public function workPackage(): BelongsTo
+    {
+        return $this->belongsTo(WorkPackage::class);
     }
 
     /**

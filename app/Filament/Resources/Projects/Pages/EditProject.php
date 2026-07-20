@@ -8,7 +8,9 @@ use App\Filament\Resources\Projects\RelationManagers\WorkPackagesRelationManager
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ForceDeleteAction;
 use Filament\Actions\RestoreAction;
+use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\MarkdownEditor;
+use Filament\Forms\Components\RichEditor;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Schemas\Components\Livewire;
 use Filament\Schemas\Components\Tabs;
@@ -52,7 +54,7 @@ class EditProject extends EditRecord
     #[Override]
     public function getContentTabLabel(): ?string
     {
-        return "Settings";
+        return "Impostazioni";
     }
 
     /* public function getContentTabIcon(): string|\BackedEnum|null
@@ -74,15 +76,11 @@ class EditProject extends EditRecord
                 ->contained(false)
                 ->activeTab(1)
                 ->tabs([
-                    // il contenuto del form base
+                    // il contenuto del form base (include già il tab "Note",
+                    // annidato dentro ProjectForm — deve restare lì e non qui
+                    // per essere parte dello schema 'form' che fillForm()/
+                    // save() effettivamente leggono e scrivono)
                     $this->getContentTabComponent(),
-
-                    Tab::make('Note')
-                        ->schema([
-                            MarkdownEditor::make('note')
-                                ->hiddenLabel()
-                                ->columnSpanFull(),
-                        ]),
 
                     Tab::make('Pacchetti')
                         ->schema([
@@ -99,8 +97,7 @@ class EditProject extends EditRecord
                                 $managerLivewireData,
                             )->key(TasksRelationManager::class),
                         ]),
-                ])
-                ->activeTab(0),
+                ]),
         ]);
     }
 }

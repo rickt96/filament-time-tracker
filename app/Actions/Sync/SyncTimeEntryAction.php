@@ -14,7 +14,7 @@ use Throwable;
  * only from explicit Filament actions (single / bulk / "all filtered").
  *
  * Resolves the chain TimeEntry -> Task -> WorkPackage -> Project -> Client,
- * rejecting up front if there's no Task with an import_clickup_id or no
+ * rejecting up front if there's no Task with an external_id or no
  * driver configured, before ever touching the driver itself.
  */
 class SyncTimeEntryAction

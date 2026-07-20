@@ -26,7 +26,7 @@ class ClientResource extends Resource
 
     protected static ?int $navigationSort = 100;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUserCircle;
 
     protected static ?string $recordTitleAttribute = 'name';
 

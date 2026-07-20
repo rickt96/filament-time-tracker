@@ -16,6 +16,14 @@ class ProjectHoursDoughnutWidget extends ChartWidget
 
     protected ?string $heading = null;
 
+    /**
+     * When true (set via WidgetConfiguration on the hosting page — the
+     * Dashboard does this, the Summary report does not), the chart renders
+     * empty until both 'from' and 'until' are explicitly present in the
+     * page filters, instead of silently falling back to an all-time query.
+     */
+    public bool $requireDateRangeFilter = false;
+
     protected function getType(): string
     {
         return 'doughnut';
@@ -26,6 +34,10 @@ class ProjectHoursDoughnutWidget extends ChartWidget
      */
     protected function getData(): array
     {
+        if ($this->isDateRangeFilterMissing()) {
+            return ['datasets' => [], 'labels' => []];
+        }
+
         $rows = app(TimeReportService::class)->totalsByProjectAndDay($this->workspace(), $this->pageFilters ?? []);
 
         return [
@@ -35,6 +47,11 @@ class ProjectHoursDoughnutWidget extends ChartWidget
             ]],
             'labels' => $rows->pluck('project_name')->all(),
         ];
+    }
+
+    private function isDateRangeFilterMissing(): bool
+    {
+        return blank($this->pageFilters['from'] ?? null) || blank($this->pageFilters['until'] ?? null);
     }
 
     private function workspace(): Workspace

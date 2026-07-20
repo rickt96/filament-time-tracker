@@ -58,7 +58,7 @@ class BudgetUtilizationService
         return $this->snapshot(
             $workPackage->budget_hours,
             $workPackage->effectiveHourlyRate(),
-            TimeEntry::query()->whereHas('task', fn (Builder $query) => $query->where('work_package_id', $workPackage->id)),
+            TimeEntry::query()->where('work_package_id', $workPackage->id),
         );
     }
 

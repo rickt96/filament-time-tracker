@@ -24,7 +24,7 @@ interface SyncDriverInterface
 
     /**
      * Push a single Time Entry to the external provider. The Time Entry's
-     * Task must already carry the import_clickup_id this provider understands —
+     * Task must already carry the external_id this provider understands —
      * this app never creates remote tasks, only maps to existing ones.
      */
     public function syncTimeEntry(TimeEntry $timeEntry): SyncResult;

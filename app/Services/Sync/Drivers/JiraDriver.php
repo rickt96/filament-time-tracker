@@ -28,7 +28,7 @@ class JiraDriver implements SyncDriverInterface
 
     public function syncTimeEntry(TimeEntry $timeEntry): SyncResult
     {
-        // TODO: call the Jira "worklog" API for $timeEntry->task->import_clickup_id,
+        // TODO: call the Jira "worklog" API for $timeEntry->task->external_id,
         // authenticating with the Client's sync_configuration (email + api_token).
         throw new SyncDriverNotImplementedException(self::class);
     }

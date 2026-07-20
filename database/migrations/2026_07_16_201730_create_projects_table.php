@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('visibility')->default('public');
             $table->decimal('budget_hours', 10, 2)->nullable();
             $table->decimal('hourly_rate', 10, 2)->nullable();
+            $table->text('note')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

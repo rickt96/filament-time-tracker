@@ -39,16 +39,23 @@ use Throwable;
  * - Only the API key owner's time entries are fetched (this is a
  *   single-user personal migration, not a multi-user one).
  *
- * Re-running the import is safe: Clients/Projects/Tags are matched by name
- * within the workspace, Tasks and Time Entries are matched by Clockify's
- * own id stored in external_id, so already-imported records are left alone
- * rather than duplicated.
+ * Re-running the import is safe: Clients/Projects/Tags/Tasks are matched by
+ * name (Tasks within their Work Package), and Time Entries are matched by
+ * Clockify's own id stored in external_id, so already-imported records are
+ * left alone rather than duplicated. Task.import_old_id also stores
+ * Clockify's own task id, but only for traceability — it isn't used as a
+ * match key.
  */
 class ClockifyImportService
 {
     private const string DEFAULT_CLIENT_NAME = 'Cliente non specificato';
 
-    private const string DEFAULT_WORK_PACKAGE_NAME = 'Import Clockify';
+    /**
+     * Also referenced by ProjectToWorkPackageTransferService, to tell whether
+     * a Work Package still carries this placeholder name (and can safely be
+     * renamed) or was already customized.
+     */
+    public const string DEFAULT_WORK_PACKAGE_NAME = 'Import Clockify';
 
     public function __construct(
         private readonly ClockifyClient $client,
@@ -241,16 +248,24 @@ class ClockifyImportService
 
                 $isAssignedToImportedUser = in_array($clockifyUserId, $clockifyTask['assigneeIds'] ?? [], strict: true);
 
+                // Matched by title within the Work Package rather than by
+                // Clockify's own id: titles are what's meaningful/stable to a
+                // user reconciling tasks across systems, and this also lets
+                // the import land on a task created locally (or by an
+                // earlier partial/manual import) with the same name.
                 $task = Task::query()->firstOrCreate(
-                    [
-                        'external_id' => (string) $clockifyTask['id']
-                    ],
                     [
                         'work_package_id' => $workPackagesByProject[$project->id]->id,
                         'name' => $clockifyTask['name'],
+                    ],
+                    [
                         'status' => ($clockifyTask['status'] ?? null) === 'DONE' ? TaskStatus::Done : TaskStatus::Todo,
                         'assignee_id' => $isAssignedToImportedUser ? $localUser->id : null,
-                        'import_clickup_id' => $this->extractClickUpIdFromDescription($clockifyTask['description'] ?? null),
+                        // Third-party (ClickUp/Jira) ticket id, conventionally embedded
+                        // in the Clockify task description between square brackets.
+                        'external_id' => $this->extractClickUpIdFromDescription($clockifyTask['description'] ?? null),
+                        // Clockify's own task id, kept only for traceability back to the import source.
+                        'import_old_id' => (string) $clockifyTask['id'],
                     ],
                 );
 

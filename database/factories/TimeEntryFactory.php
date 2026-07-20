@@ -26,6 +26,7 @@ class TimeEntryFactory extends Factory
             'user_id' => User::factory(),
             'project_id' => Project::factory(),
             'task_id' => null,
+            'work_package_id' => null,
             'description' => fake()->boolean(70) ? fake()->sentence() : null,
             'date' => $startedAt->toDateString(),
             'started_at' => $startedAt,
