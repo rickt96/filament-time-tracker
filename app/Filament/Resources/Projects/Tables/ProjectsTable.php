@@ -4,13 +4,21 @@ namespace App\Filament\Resources\Projects\Tables;
 
 use App\Enums\ProjectStatus;
 use App\Models\Project;
+use App\Models\TimeEntry;
 use App\Models\User;
+use App\Models\WorkPackage;
+use App\Services\TimeEntry\AssignOrphanTimeEntriesService;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
+use Filament\Facades\Filament;
+use Filament\Forms\Components\Select;
+use Filament\Notifications\Notification;
 use Filament\Support\Colors\Color;
 use Filament\Tables\Columns\ColorColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -26,6 +34,7 @@ class ProjectsTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (Builder $query) => $query->withCount(['timeEntries', 'workPackages', 'invoices']))
             ->columns([
                 /* ColorColumn::make('color')
                     ->label(''), */
@@ -34,7 +43,7 @@ class ProjectsTable
                     ->searchable()
                     ->sortable()
                     ->badge()
-                    ->color(fn($record) => Color::hex($record->color)),
+                    ->color(fn ($record) => $record->color ? Color::hex($record->color) : 'gray'),
                 TextColumn::make('client.name')
                     ->label('Cliente')
                     ->searchable()
@@ -51,9 +60,14 @@ class ProjectsTable
                     ->label('Tariffa')
                     ->money('EUR')
                     ->sortable(), */
-                TextColumn::make('members_count')
-                    ->label('Membri')
-                    ->counts('members')
+                TextColumn::make('work_packages_count')
+                    ->label('Pacchetti')
+                    ->sortable(),
+                TextColumn::make('time_entries_count')
+                    ->label('Time entries')
+                    ->sortable(),
+                TextColumn::make('invoices_count')
+                    ->label('Invoices')
                     ->sortable(),
             ])
             ->filters([
@@ -85,12 +99,48 @@ class ProjectsTable
                             : $user->favoriteProjects()->attach($record);
                     })
                     ->successNotificationTitle(
-                        fn($record) => static::isFavorite($record) 
-                                            ? "Progetto {$record->name} aggiunto ai preferiti" 
+                        fn ($record) => static::isFavorite($record)
+                                            ? "Progetto {$record->name} aggiunto ai preferiti"
                                             : "Progetto {$record->name} rimosso dai preferiti"
                     ),
-                EditAction::make()
-                    ->hiddenLabel(),
+                ActionGroup::make([
+                    EditAction::make()
+                        ->hiddenLabel(),
+                    Action::make('assignOrphanTimeEntries')
+                        ->label('Assegna time entry orfane')
+                        ->icon('heroicon-o-link')
+                        ->visible(fn (Project $record): bool => TimeEntry::query()
+                            ->where('project_id', $record->id)
+                            ->whereNull('work_package_id')
+                            ->exists())
+                        ->schema(fn (Project $record): array => [
+                            Select::make('work_package_id')
+                                ->label('Work Package di destinazione')
+                                ->helperText('Per emergenza è possibile selezionare anche un Work Package di un altro progetto.')
+                                ->options(fn (): array => WorkPackage::query()
+                                    ->whereHas('project', fn (Builder $query) => $query->where('workspace_id', Filament::getTenant()?->getKey()))
+                                    ->with('project')
+                                    ->get()
+                                    ->sortBy([['project.name', 'asc'], ['sort_order', 'asc']])
+                                    ->mapWithKeys(fn (WorkPackage $workPackage): array => [
+                                        $workPackage->id => "{$workPackage->project->name} — {$workPackage->name}",
+                                    ])
+                                    ->all())
+                                ->searchable()
+                                ->required(),
+                        ])
+                        ->action(function (Project $record, array $data): void {
+                            $workPackage = WorkPackage::with('project')->findOrFail((int) $data['work_package_id']);
+
+                            $moved = app(AssignOrphanTimeEntriesService::class)->assign($record, $workPackage);
+
+                            Notification::make()
+                                ->title("{$moved} time entry assegnate a \"{$workPackage->name}\"")
+                                ->success()
+                                ->send();
+                        }),
+                    DeleteAction::make(),
+                ]),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
@@ -98,7 +148,8 @@ class ProjectsTable
                     ForceDeleteBulkAction::make(),
                     RestoreBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->persistFiltersInSession();
     }
 
     protected static function isFavorite(Project $record): bool

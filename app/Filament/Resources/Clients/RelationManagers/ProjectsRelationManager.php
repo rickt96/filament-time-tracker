@@ -54,7 +54,7 @@ class ProjectsRelationManager extends RelationManager
                 TextColumn::make('name')
                     ->label('Nome')
                     ->searchable()
-                    ->color(fn($record) => Color::hex($record->color))
+                    ->color(fn ($record) => $record->color ? Color::hex($record->color) : 'gray')
                     ->badge(),
                 TextColumn::make('status')
                     ->label('Stato')

@@ -5,6 +5,7 @@ namespace App\Filament\Resources\TimeEntries;
 use App\Filament\Resources\TimeEntries\Pages\CreateTimeEntry;
 use App\Filament\Resources\TimeEntries\Pages\EditTimeEntry;
 use App\Filament\Resources\TimeEntries\Pages\ListTimeEntries;
+use App\Filament\Resources\TimeEntries\Pages\ManageTimeEntries;
 use App\Filament\Resources\TimeEntries\Schemas\TimeEntryForm;
 use App\Filament\Resources\TimeEntries\Tables\TimeEntriesTable;
 use App\Models\TimeEntry;
@@ -30,7 +31,7 @@ class TimeEntryResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClock;
 
-    protected static ?string $navigationLabel = "Time tracker";
+    protected static ?string $navigationLabel = 'Time tracker';
 
     /**
      * TimeEntry has no direct workspace_id column — ownership flows through
@@ -50,14 +51,14 @@ class TimeEntryResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        //return TimeEntryForm::configure($schema);
+        // return TimeEntryForm::configure($schema);
         return TimeEntryForm::configureRangeOnly($schema);
     }
 
-    public static function table(Table $table): Table
+    /* public static function table(Table $table): Table
     {
         return TimeEntriesTable::configure($table);
-    }
+    } */
 
     public static function getRelations(): array
     {
@@ -70,6 +71,7 @@ class TimeEntryResource extends Resource
     {
         return [
             'index' => ListTimeEntries::route('/'),
+            'manage' => ManageTimeEntries::route('/manage'),
             'create' => CreateTimeEntry::route('/create'),
             'edit' => EditTimeEntry::route('/{record}/edit'),
         ];

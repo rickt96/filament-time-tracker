@@ -26,7 +26,7 @@ class WorkPackageResource extends Resource
 {
     protected static ?string $model = WorkPackage::class;
 
-    protected static string|UnitEnum|null $navigationGroup = "Gestione";
+    protected static string|UnitEnum|null $navigationGroup = 'Gestione';
 
     protected static ?int $navigationSort = 100;
 

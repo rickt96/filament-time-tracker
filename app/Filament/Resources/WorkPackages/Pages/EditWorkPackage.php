@@ -7,6 +7,7 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\ForceDeleteAction;
 use Filament\Actions\RestoreAction;
 use Filament\Resources\Pages\EditRecord;
+use Override;
 
 class EditWorkPackage extends EditRecord
 {
@@ -19,5 +20,11 @@ class EditWorkPackage extends EditRecord
             ForceDeleteAction::make(),
             RestoreAction::make(),
         ];
+    }
+
+    #[Override]
+    public function hasCombinedRelationManagerTabsWithContent(): bool
+    {
+        return true;
     }
 }

@@ -7,6 +7,7 @@ use App\Filament\Resources\Projects\Pages\EditProject;
 use App\Filament\Resources\Projects\Pages\ListProjects;
 use App\Filament\Resources\Projects\RelationManagers\MembersRelationManager;
 use App\Filament\Resources\Projects\RelationManagers\TasksRelationManager;
+use App\Filament\Resources\Projects\RelationManagers\TimeEntriesRelationManager;
 use App\Filament\Resources\Projects\RelationManagers\WorkPackagesRelationManager;
 use App\Filament\Resources\Projects\Schemas\ProjectForm;
 use App\Filament\Resources\Projects\Tables\ProjectsTable;
@@ -17,6 +18,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use UnitEnum;
 
@@ -24,8 +26,8 @@ class ProjectResource extends Resource
 {
     protected static ?string $model = Project::class;
 
-    protected static string|UnitEnum|null $navigationGroup = "Gestione";
-    
+    protected static string|UnitEnum|null $navigationGroup = 'Gestione';
+
     protected static ?int $navigationSort = 100;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentText;
@@ -47,6 +49,7 @@ class ProjectResource extends Resource
         return [
             WorkPackagesRelationManager::class,
             TasksRelationManager::class,
+            TimeEntriesRelationManager::class,
             MembersRelationManager::class,
         ];
     }
@@ -66,5 +69,16 @@ class ProjectResource extends Resource
             ->withoutGlobalScopes([
                 SoftDeletingScope::class,
             ]);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function getGlobalSearchResultDetails(Model $record): array
+    {
+        /** @var Project $record */
+        return [
+            'Cliente' => $record->client?->name ?? '—',
+        ];
     }
 }

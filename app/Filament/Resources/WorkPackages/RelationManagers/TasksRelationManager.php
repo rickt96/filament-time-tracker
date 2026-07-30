@@ -2,19 +2,17 @@
 
 namespace App\Filament\Resources\WorkPackages\RelationManagers;
 
-use App\Enums\TaskStatus;
+use App\Filament\Resources\Tasks\Schemas\SimpleTaskForm;
+use App\Filament\Support\TaskDetailsAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Illuminate\Support\Facades\Auth;
 
 class TasksRelationManager extends RelationManager
 {
@@ -22,27 +20,7 @@ class TasksRelationManager extends RelationManager
 
     public function form(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                TextInput::make('name')
-                    ->label('Nome')
-                    ->required()
-                    ->maxLength(255),
-                Select::make('status')
-                    ->label('Stato')
-                    ->options(TaskStatus::class)
-                    ->default(TaskStatus::Todo)
-                    ->required(),
-                Select::make('assignee_id')
-                    ->label('Assegnatario')
-                    ->relationship('assignee', 'name')
-                    ->default(fn (): int|string|null => Auth::id())
-                    ->searchable()
-                    ->preload(),
-                TextInput::make('external_id')
-                    ->label('ID esterno')
-                    ->maxLength(255),
-            ]);
+        return SimpleTaskForm::configure($schema);
     }
 
     public function table(Table $table): Table
@@ -52,10 +30,19 @@ class TasksRelationManager extends RelationManager
             ->columns([
                 TextColumn::make('name')
                     ->label('Nome')
-                    ->searchable(),
+                    ->searchable()
+                    ->action(TaskDetailsAction::make()),
                 TextColumn::make('status')
                     ->label('Stato')
                     ->badge(),
+                TextColumn::make('priority')
+                    ->label('Priorità')
+                    ->badge(),
+                TextColumn::make('expire')
+                    ->label('Scadenza')
+                    ->dateTime()
+                    ->toggleable()
+                    ->placeholder('—'),
                 TextColumn::make('assignee.name')
                     ->label('Assegnatario'),
             ])

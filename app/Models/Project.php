@@ -92,6 +92,15 @@ class Project extends Model
     }
 
     /**
+     * @return BelongsToMany<Invoice, $this>
+     */
+    public function invoices(): BelongsToMany
+    {
+        return $this->belongsToMany(Invoice::class, 'invoice_project')
+            ->withTimestamps();
+    }
+
+    /**
      * Tasks don't belong to a Project directly, only through a Work
      * Package — this aggregates them across all of the Project's Work
      * Packages for display purposes (see ProjectResource's Tasks relation

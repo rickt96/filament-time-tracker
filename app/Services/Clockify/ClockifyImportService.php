@@ -41,7 +41,7 @@ use Throwable;
  *
  * Re-running the import is safe: Clients/Projects/Tags/Tasks are matched by
  * name (Tasks within their Work Package), and Time Entries are matched by
- * Clockify's own id stored in external_id, so already-imported records are
+ * Clockify's own id stored in import_old_id, so already-imported records are
  * left alone rather than duplicated. Task.import_old_id also stores
  * Clockify's own task id, but only for traceability — it isn't used as a
  * match key.
@@ -200,7 +200,7 @@ class ClockifyImportService
 
             $project = Project::query()->firstOrCreate(
                 [
-                    'workspace_id' => $workspace->id, 'name' => $clockifyProject['name']
+                    'workspace_id' => $workspace->id, 'name' => $clockifyProject['name'],
                 ],
                 [
                     'client_id' => $client->id,
@@ -317,7 +317,7 @@ class ClockifyImportService
         if (blank($description) || ! preg_match('/\[([^\[\]]+)\]/', $description, $matches)) {
             return null;
         }
-        
+
         return $matches[1];
     }
 
@@ -368,7 +368,7 @@ class ClockifyImportService
         foreach ($entries as $entry) {
             $clockifyEntryId = (string) $entry['id'];
 
-            if (TimeEntry::query()->where('external_id', $clockifyEntryId)->exists()) {
+            if (TimeEntry::query()->where('import_old_id', $clockifyEntryId)->exists()) {
                 $summary->timeEntriesSkipped++;
 
                 continue;
@@ -415,7 +415,7 @@ class ClockifyImportService
                     'tags' => $tagIds,
                 ]);
 
-                $timeEntry->update(['external_id' => $clockifyEntryId]);
+                $timeEntry->update(['import_old_id' => $clockifyEntryId]);
 
                 $summary->timeEntriesImported++;
             } catch (Throwable $exception) {

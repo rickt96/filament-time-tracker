@@ -5,7 +5,6 @@ namespace App\Filament\Widgets\Reports;
 use App\Models\Workspace;
 use App\Services\Reports\TimeReportService;
 use Filament\Facades\Filament;
-use Filament\Forms\Components\Select;
 use Filament\Widgets\ChartWidget;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Illuminate\Contracts\Support\Htmlable;
@@ -16,7 +15,7 @@ class HoursByProjectChartWidget extends ChartWidget
 {
     use InteractsWithPageFilters;
 
-    //protected ?string $heading = 'Ore per giorno';
+    // protected ?string $heading = 'Ore per giorno';
 
     /* #[Override]
     public function getHeading(): string|Htmlable|null
@@ -37,9 +36,9 @@ class HoursByProjectChartWidget extends ChartWidget
         return 'bar';
     }
 
-    protected int | string | array $columnSpan = 'full';
+    protected int|string|array $columnSpan = 'full';
 
-    protected ?string $maxHeight = "400px";
+    protected ?string $maxHeight = '400px';
 
     /**
      * @return array<string, mixed>
@@ -54,7 +53,7 @@ class HoursByProjectChartWidget extends ChartWidget
 
         $rows = app(TimeReportService::class)->totalsByProjectAndDay($this->workspace(), $this->pageFilters ?? []);
 
-        $this->heading = "Totale ore: " . ($rows->sum("total_seconds") / 3600);
+        $this->heading = 'Totale ore: '.($rows->sum('total_seconds') / 3600);
 
         $days = $rows
             ->flatMap(fn (array $row): array => array_keys($row['days']))

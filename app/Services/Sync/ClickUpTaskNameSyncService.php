@@ -30,7 +30,7 @@ class ClickUpTaskNameSyncService
         $projects = Project::query()
             ->whereHas('client', fn (Builder $query) => $query->where('sync_driver', ClientSyncDriver::ClickUp))
             ->with('client')
-            ->whereHas("client", fn($q) => $q->where("id", 3)) // TEMP solo il cliente 3
+            ->whereHas('client', fn ($q) => $q->where('id', 3)) // TEMP solo il cliente 3
             ->get();
 
         foreach ($projects as $project) {

@@ -3,11 +3,14 @@
 namespace App\Filament\Widgets;
 
 use App\Actions\TimeEntry\CreateTimeEntryAction;
+use App\Actions\TimeEntry\DuplicateTimeEntryAction;
 use App\Actions\TimeEntry\UpdateTimeEntryAction;
 use App\Filament\Resources\TimeEntries\Pages\CreateTimeEntry;
 use App\Filament\Resources\TimeEntries\Schemas\TimeEntryForm;
 use App\Models\TimeEntry;
 use App\Models\User;
+use Carbon\Carbon;
+use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Schema;
@@ -20,7 +23,6 @@ use Guava\Calendar\ValueObjects\DateClickInfo;
 use Guava\Calendar\ValueObjects\EventDropInfo;
 use Guava\Calendar\ValueObjects\EventResizeInfo;
 use Guava\Calendar\ValueObjects\FetchInfo;
-use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
@@ -78,15 +80,15 @@ class TimeEntryCalendarWidget extends CalendarWidget
             ->mountUsing(function (Schema $schema, ?DateClickInfo $dateClick): void {
                 $schema->fill([
                     'date' => $dateClick?->date->toDateString() ?? now()->toDateString(),
-                    'started_at' => $dateClick?->date?->format("H:i"),
-                    'ended_at' => $dateClick?->date?->addHour()->format("H:i"),
+                    'started_at' => $dateClick?->date?->format('H:i'),
+                    'ended_at' => $dateClick?->date?->addHour()->format('H:i'),
                 ]);
             })
             ->using(function (array $data) {
                 return app(CreateTimeEntryAction::class)->handle(
-                        $this->currentUser(), 
-                        CreateTimeEntry::normalize($data)
-                    );
+                    $this->currentUser(),
+                    CreateTimeEntry::normalize($data)
+                );
             });
     }
 
@@ -100,7 +102,26 @@ class TimeEntryCalendarWidget extends CalendarWidget
                 return $data;
             })
             ->using(fn (TimeEntry $record, array $data): TimeEntry => app(UpdateTimeEntryAction::class)
-                ->handle($record, $data));
+                ->handle($record, $data)
+            )
+            ->extraModalFooterActions([
+                Action::make('duplicate')
+                    ->label('Duplica')
+                    ->color('secondary')
+                    ->icon('heroicon-o-document-duplicate')
+                    ->model(fn (): ?string => $this->getEventModel())
+                    ->record(fn (): ?Model => $this->getEventRecord())
+                    ->action(function (TimeEntry $record): void {
+                        app(DuplicateTimeEntryAction::class)->handle($record, $record->date, $record->started_at);
+
+                        Notification::make()
+                            ->title('Time entry duplicato')
+                            ->success()
+                            ->send();
+
+                        $this->refreshRecords();
+                    }),
+            ]);
     }
 
     /**
@@ -119,6 +140,35 @@ class TimeEntryCalendarWidget extends CalendarWidget
     protected function onDateClick(DateClickInfo $info): void
     {
         $this->mountAction('createTimeEntry');
+    }
+
+    /**
+     * @return array<Action>
+     */
+    /* protected function getEventClickContextMenuActions(): array
+    {
+        return [
+            $this->duplicateAction(),
+        ];
+    } */
+
+    public function duplicateAction(): Action
+    {
+        return Action::make('duplicate')
+            ->label('Duplica')
+            ->icon('heroicon-o-document-duplicate')
+            ->model(fn (): ?string => $this->getEventModel())
+            ->record(fn (): ?Model => $this->getEventRecord())
+            ->action(function (TimeEntry $record): void {
+                app(DuplicateTimeEntryAction::class)->handle($record);
+
+                Notification::make()
+                    ->title('Time entry duplicato')
+                    ->success()
+                    ->send();
+
+                $this->refreshRecords();
+            });
     }
 
     /**

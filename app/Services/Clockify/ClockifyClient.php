@@ -2,6 +2,7 @@
 
 namespace App\Services\Clockify;
 
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 
@@ -106,7 +107,7 @@ class ClockifyClient
     {
         $response = Http::withHeaders(['X-Api-Key' => $this->apiKey])
             ->baseUrl($this->baseUrl)
-            ->retry(3, 1000, fn ($exception) => $exception instanceof \Illuminate\Http\Client\RequestException
+            ->retry(3, 1000, fn ($exception) => $exception instanceof RequestException
                 && $exception->response->status() === 429)
             ->timeout(30)
             ->get($path, $query);

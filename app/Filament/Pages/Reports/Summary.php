@@ -20,7 +20,6 @@ use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
-use Filament\Pages\Dashboard;
 use Filament\Pages\Page;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -137,14 +136,12 @@ class Summary extends Page
         ];
     }
 
-
     public function getWidgets(): array
     {
         return [
             HoursByProjectChartWidget::class,
         ];
     }
-
 
     public function getTotalDuration(): string
     {

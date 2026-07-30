@@ -19,8 +19,8 @@ class WorkspaceResource extends Resource
 {
     protected static ?string $model = Workspace::class;
 
-    protected static string|UnitEnum|null $navigationGroup = "Gestione";
-    
+    protected static string|UnitEnum|null $navigationGroup = 'Gestione';
+
     protected static ?int $navigationSort = 100;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;

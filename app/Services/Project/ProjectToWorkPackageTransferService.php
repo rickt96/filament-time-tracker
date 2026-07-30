@@ -58,7 +58,7 @@ class ProjectToWorkPackageTransferService
             throw new InvalidArgumentException("I seguenti progetti appartengono a un workspace diverso dal master e non possono essere trasferiti: {$names}.");
         }
 
-        $summary = new ProjectToWorkPackageTransferSummary();
+        $summary = new ProjectToWorkPackageTransferSummary;
 
         foreach ($sourceProjects as $sourceProject) {
             if ($sourceProject->client_id !== $master->client_id) {

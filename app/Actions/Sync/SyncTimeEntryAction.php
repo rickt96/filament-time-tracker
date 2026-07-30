@@ -24,7 +24,7 @@ class SyncTimeEntryAction
     public function handle(TimeEntry $timeEntry): TimeEntry
     {
         $task = $timeEntry->task;
-        
+
         if (! $task || blank($task->external_id)) {
             return $this->markFailed($timeEntry, 'Il time entry non è collegato a un task con un ID esterno.');
         }

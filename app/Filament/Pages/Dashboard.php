@@ -2,14 +2,6 @@
 
 namespace App\Filament\Pages;
 
-use App\Filament\Widgets\HoursByProjectChartWidget;
-use App\Models\WorkPackage;
-use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\Select;
-use Filament\Pages\Dashboard as BaseDashboard;
-use Filament\Pages\Dashboard\Actions\FilterAction;
-use Filament\Pages\Dashboard\Concerns\HasFiltersAction;
-use App\Exports\TimeEntriesExport;
 use App\Filament\Widgets\Reports\HoursByProjectChartWidget as ReportsHoursByProjectChartWidget;
 use App\Filament\Widgets\Reports\HoursByProjectTableWidget;
 use App\Filament\Widgets\Reports\ProjectHoursDoughnutWidget;
@@ -17,26 +9,20 @@ use App\Models\Client;
 use App\Models\Project;
 use App\Models\Tag;
 use App\Models\Task;
-use App\Models\TimeEntry;
+use App\Models\WorkPackage;
 use App\Models\Workspace;
-use App\Services\Reports\ProjectBudgetComparisonRow;
-use App\Services\Reports\TimeReportService;
-use App\Support\DurationFormatter;
 use BackedEnum;
-use Barryvdh\DomPDF\Facade\Pdf;
-use Filament\Actions\Action;
 use Filament\Facades\Filament;
-use Filament\Pages\Page;
-use Filament\Schemas\Schema;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Select;
+use Filament\Pages\Dashboard\Actions\FilterAction;
+use Filament\Pages\Dashboard as BaseDashboard;
+use Filament\Pages\Dashboard\Concerns\HasFiltersAction;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 use Filament\Widgets\WidgetConfiguration;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Collection;
-use Maatwebsite\Excel\Facades\Excel;
-use Override;
-use UnitEnum;
 
 class Dashboard extends BaseDashboard
 {
@@ -46,11 +32,11 @@ class Dashboard extends BaseDashboard
 
     protected Width|string|null $maxContentWidth = 'full';
 
-    public static function getNavigationIcon(): string | BackedEnum | Htmlable | null
+    public static function getNavigationIcon(): string|BackedEnum|Htmlable|null
     {
         return Heroicon::OutlinedSquares2x2;
     }
-    
+
     /**
      * HasFilters::mountHasFilters() restores filters from the session (or
      * the query string) if present, leaving $this->filters null otherwise.
@@ -123,7 +109,7 @@ class Dashboard extends BaseDashboard
         ];
     }
 
-    public function getColumns(): int | array
+    public function getColumns(): int|array
     {
         return 3;
     }
@@ -133,8 +119,8 @@ class Dashboard extends BaseDashboard
         return [
             ReportsHoursByProjectChartWidget::class,
             HoursByProjectTableWidget::class,
-            ProjectHoursDoughnutWidget::class
-            //new WidgetConfiguration(ProjectHoursDoughnutWidget::class, ['requireDateRangeFilter' => true]),
+            ProjectHoursDoughnutWidget::class,
+            // new WidgetConfiguration(ProjectHoursDoughnutWidget::class, ['requireDateRangeFilter' => true]),
         ];
     }
 

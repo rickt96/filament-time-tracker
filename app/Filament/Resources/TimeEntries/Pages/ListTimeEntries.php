@@ -7,6 +7,7 @@ use App\Actions\TimeEntry\CopyLastActivityAction;
 use App\Actions\TimeEntry\CopyPreviousDayAction;
 use App\Actions\TimeEntry\CreateTimeEntryAction;
 use App\Enums\TimeEntrySyncStatus;
+use App\Filament\Resources\TimeEntries\Tables\TimeEntriesTable;
 use App\Filament\Resources\TimeEntries\TimeEntryResource;
 use App\Models\TimeEntry;
 use App\Models\User;
@@ -15,6 +16,7 @@ use Filament\Actions\CreateAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Support\Enums\Width;
+use Filament\Tables\Table;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 
@@ -23,7 +25,12 @@ class ListTimeEntries extends ListRecords
     protected static string $resource = TimeEntryResource::class;
 
     protected Width|string|null $maxContentWidth = 'full';
-    
+
+    public function table(Table $table): Table
+    {
+        return TimeEntriesTable::configure($table);
+    }
+
     protected function getHeaderActions(): array
     {
         return [
@@ -75,6 +82,11 @@ class ListTimeEntries extends ListRecords
                         ->title("Sincronizzazione completata: {$synced} riuscite, {$failed} fallite")
                         ->send();
                 }), */
+            Action::make('manage')
+                ->label('Gestione avanzata')
+                ->icon('heroicon-o-table-cells')
+                ->color('gray')
+                ->url(fn (): string => TimeEntryResource::getUrl('manage')),
             CreateAction::make()
                 ->modal()
                 ->using(function (array $data): TimeEntry {

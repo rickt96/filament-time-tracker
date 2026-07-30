@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\TimeEntries\Schemas;
 
 use App\Enums\ProjectStatus;
+use App\Enums\TaskStatus;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\WorkPackage;
@@ -19,6 +20,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\TimePicker;
 use Filament\Schemas\Components\Component;
+use Filament\Schemas\Components\FusedGroup;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Builder;
@@ -29,6 +31,7 @@ class TimeEntryForm
     public static function configure(Schema $schema): Schema
     {
         return $schema
+            ->columns(1)
             ->components([
                 ...self::projectComponents(),
                 DatePicker::make('date')
@@ -46,16 +49,25 @@ class TimeEntryForm
                     ->live()
                     ->inline()
                     ->visible(fn (string $operation): bool => $operation === 'create'),
-                TimePicker::make('started_at')
-                    ->label('Inizio')
-                    ->seconds(false)
+                // FusedGroup (not Grid): renders one shared inline label,
+                // aligned with the other fields' label column, with both
+                // TimePickers fused side by side in the value column — a
+                // plain Grid would give each TimePicker its own separate
+                // inline label instead.
+                FusedGroup::make([
+                    TimePicker::make('started_at')
+                        ->hiddenLabel()
+                        ->seconds(false)
+                        ->required(fn (string $operation, Get $get): bool => $operation === 'edit' || $get('entry_mode') === 'range'),
+                    TimePicker::make('ended_at')
+                        ->hiddenLabel()
+                        ->seconds(false)
+                        ->required(fn (string $operation, Get $get): bool => $operation === 'edit' || $get('entry_mode') === 'range'),
+                ])
+                    ->label('Orario inizio/fine')
+                    ->inlineLabel()
                     ->visible(fn (string $operation, Get $get): bool => $operation === 'edit' || $get('entry_mode') === 'range')
-                    ->required(fn (string $operation, Get $get): bool => $operation === 'edit' || $get('entry_mode') === 'range'),
-                TimePicker::make('ended_at')
-                    ->label('Fine')
-                    ->seconds(false)
-                    ->visible(fn (string $operation, Get $get): bool => $operation === 'edit' || $get('entry_mode') === 'range')
-                    ->required(fn (string $operation, Get $get): bool => $operation === 'edit' || $get('entry_mode') === 'range'),
+                    ->column(2),
                 TextInput::make('duration_hours')
                     ->label('Ore')
                     ->numeric()
@@ -89,6 +101,7 @@ class TimeEntryForm
     public static function configureRangeOnly(Schema $schema): Schema
     {
         return $schema
+            ->columns(1)
             ->components([
                 ...self::projectComponents(),
                 DatePicker::make('date')
@@ -96,20 +109,22 @@ class TimeEntryForm
                     ->label('Data')
                     ->required()
                     ->default(now()),
-                TimePicker::make('started_at')
-                    ->inlineLabel()
-                    ->label('Inizio')
-                    ->seconds(false)
-                    /* ->minutesStep(5)
-                    ->native(false) */
-                    ->default(fn (): string => self::defaultRoundedTime(now()))
-                    ->required(),
-                TimePicker::make('ended_at')
-                    ->inlineLabel()
-                    ->label('Fine')
-                    ->seconds(false)
-                    ->default(fn (): string => self::defaultRoundedTime(now()->addHour()))
-                    ->required(),
+                FusedGroup::make([
+                    TimePicker::make('started_at')
+                        ->hiddenLabel()
+                        ->seconds(false)
+                        /* ->minutesStep(5)
+                        ->native(false) */
+                        ->default(fn (): string => self::defaultRoundedTime(now()))
+                        ->required(),
+                    TimePicker::make('ended_at')
+                        ->hiddenLabel()
+                        ->seconds(false)
+                        ->default(fn (): string => self::defaultRoundedTime(now()->addHour()))
+                        ->required(),
+                ])
+                    ->label('Orario inizio/fine')
+                    ->inlineLabel(),
                 self::descriptionComponent(),
             ]);
     }
@@ -136,22 +151,22 @@ class TimeEntryForm
                         )
                         ->orderBy('name'),
                 ) */
-                ->options(function(){
+                ->options(function () {
                     return Project::query()
-                            ->with('client')
-                            ->where('workspace_id', Filament::getTenant()?->getKey())
-                            ->where('status', ProjectStatus::Active)
-                            ->orderByRaw(
-                                '(select count(*) from favorites where favorites.favoritable_type = ? and favorites.favoritable_id = projects.id and favorites.user_id = ?) desc',
-                                [Project::class, Auth::id()],
-                            )
-                            ->orderBy('name')
-                            ->get()
-                            ->mapWithKeys(function (Project $project) {
-                                return [
-                                    $project->id => "{$project->name} - {$project->client?->name}",
-                                ];
-                            });
+                        ->with('client')
+                        ->where('workspace_id', Filament::getTenant()?->getKey())
+                        ->where('status', ProjectStatus::Active)
+                        ->orderByRaw(
+                            '(select count(*) from favorites where favorites.favoritable_type = ? and favorites.favoritable_id = projects.id and favorites.user_id = ?) desc',
+                            [Project::class, Auth::id()],
+                        )
+                        ->orderBy('name')
+                        ->get()
+                        ->mapWithKeys(function (Project $project) {
+                            return [
+                                $project->id => "{$project->name} - {$project->client?->name}",
+                            ];
+                        });
                 })
                 ->searchable()
                 ->preload()
@@ -185,7 +200,9 @@ class TimeEntryForm
                 ->relationship(
                     name: 'task',
                     titleAttribute: 'name',
-                    modifyQueryUsing: fn (Builder $query, Get $get) => $query->where('work_package_id', $get('work_package_id')),
+                    modifyQueryUsing: fn (Builder $query, Get $get) => $query
+                        ->where('work_package_id', $get('work_package_id'))
+                        ->whereNotIn('status', [TaskStatus::Done, TaskStatus::Cancelled]),
                 )
                 ->searchable()
                 ->preload()
@@ -201,17 +218,22 @@ class TimeEntryForm
                         $set('work_package_id', Task::find((int) $state)?->work_package_id);
                     }
                 })
-                ->createOptionForm(fn (): array => [
+                // Same schema for both create and edit (manageOptionForm sets
+                // createOptionForm + editOptionForm together): the default
+                // createOptionUsing/updateOptionUsing wired in by
+                // ->relationship() above already handle persisting either one.
+                ->manageOptionForm(fn (): array => [
                     Select::make('work_package_id')
                         ->label('Work Package')
                         // Not scoped to the outer form's project_id: this modal's
                         // schema isn't nested inside the main form's component
-                        // tree (it belongs to the mounted create-option Action),
-                        // so relative Get paths like '../project_id' don't reach
-                        // it — that syntax only works for Repeater/Builder items.
-                        // Listing every work package in the tenant, labelled by
-                        // project, keeps this correct regardless of which page
-                        // hosts the form (Create/Edit page, table modal, Calendar).
+                        // tree (it belongs to the mounted create/edit-option
+                        // Action), so relative Get paths like '../project_id'
+                        // don't reach it — that syntax only works for
+                        // Repeater/Builder items. Listing every work package in
+                        // the tenant, labelled by project, keeps this correct
+                        // regardless of which page hosts the form (Create/Edit
+                        // page, table modal, Calendar).
                         ->options(fn (): array => WorkPackage::query()
                             ->with('project')
                             ->whereHas('project', fn (Builder $query) => $query->where('workspace_id', Filament::getTenant()?->getKey()))
@@ -227,15 +249,20 @@ class TimeEntryForm
                         ->label('Nome')
                         ->required()
                         ->maxLength(255),
-                    
+
                     TextInput::make('external_id')
                         ->label('ID Esterno')
                         ->maxLength(255),
 
+                    // Only relevant on create — the edit form fills this from
+                    // the Task's real current assignee_id before submit, so an
+                    // edit round-trips it unchanged rather than resetting it
+                    // to the current user.
                     Hidden::make('assignee_id')
                         ->default(fn (): int|string|null => Auth::id()),
                 ])
-                ->createOptionAction(fn (Action $action) => $action->modalHeading('Nuovo task')),
+                ->createOptionAction(fn (Action $action) => $action->modalHeading('Nuovo task'))
+                ->editOptionAction(fn (Action $action) => $action->modalHeading('Modifica task')),
             /* Select::make('tags')
                 ->inlineLabel()
                 ->label('Tag')

@@ -12,7 +12,7 @@ class ProjectHoursDoughnutWidget extends ChartWidget
 {
     use InteractsWithPageFilters;
 
-    protected int | string | array $columnSpan = 1;
+    protected int|string|array $columnSpan = 1;
 
     protected ?string $heading = null;
 

@@ -3,6 +3,7 @@
 namespace App\Actions\TimeEntry;
 
 use App\Models\TimeEntry;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Carbon;
 
 class DuplicateTimeEntryAction
@@ -14,7 +15,7 @@ class DuplicateTimeEntryAction
      * copy preserves that exact start time (range mode); otherwise it's
      * placed as a plain duration starting at midnight (duration mode).
      */
-    public function handle(TimeEntry $source, ?Carbon $date = null, ?Carbon $startAt = null): TimeEntry
+    public function handle(TimeEntry $source, Carbon|CarbonImmutable|null $date = null, Carbon|CarbonImmutable|null $startAt = null): TimeEntry
     {
         $date ??= Carbon::now();
 

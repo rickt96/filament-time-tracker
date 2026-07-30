@@ -2,7 +2,9 @@
 
 namespace App\Filament\Resources\Tasks\Tables;
 
+use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
+use App\Filament\Support\TaskDetailsAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -18,21 +20,32 @@ class TasksTable
     public static function configure(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn($query) => $query->with("workPackage.project"))
+            ->modifyQueryUsing(fn ($query) => $query->with('workPackage.project'))
             ->columns([
                 TextColumn::make('name')
                     ->label('Nome')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->action(TaskDetailsAction::make()),
                 TextColumn::make('workPackage.name')
                     ->label('Work Package')
                     ->searchable()
                     ->sortable()
-                    ->description(fn($record) => $record->workPackage?->project?->name, 'above'),
+                    ->description(fn ($record) => $record->workPackage?->project?->name, 'above'),
                 TextColumn::make('status')
                     ->label('Stato')
                     ->badge()
                     ->sortable(),
+                TextColumn::make('priority')
+                    ->label('Priorità')
+                    ->badge()
+                    ->sortable(),
+                TextColumn::make('expire')
+                    ->label('Scadenza')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable()
+                    ->placeholder('—'),
                 TextColumn::make('assignee.name')
                     ->label('Assegnatario')
                     ->searchable()
@@ -46,6 +59,9 @@ class TasksTable
                 SelectFilter::make('status')
                     ->label('Stato')
                     ->options(TaskStatus::class),
+                SelectFilter::make('priority')
+                    ->label('Priorità')
+                    ->options(TaskPriority::class),
                 TrashedFilter::make(),
             ])
             ->recordActions([

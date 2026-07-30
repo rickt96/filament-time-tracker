@@ -36,7 +36,9 @@ class UpdateTimeEntryAction
         }
 
         return DB::transaction(function () use ($timeEntry, $data, $project, $startedAt, $endedAt) {
-            $this->eligibility->assertNoOverlap($timeEntry->user_id, $startedAt, $endedAt, ignoreId: $timeEntry->id);
+
+            // consento l'overlap
+            // $this->eligibility->assertNoOverlap($timeEntry->user_id, $startedAt, $endedAt, ignoreId: $timeEntry->id);
 
             $durationSeconds = $this->calculator->durationInSeconds($startedAt, $endedAt);
 

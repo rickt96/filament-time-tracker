@@ -6,9 +6,9 @@ use App\Enums\WorkPackageStatus;
 use App\Models\WorkPackage;
 use App\Services\Budget\BudgetUtilizationService;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\MarkdownEditor;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -55,10 +55,6 @@ class WorkPackageForm
                             ->label('Ordinamento')
                             ->numeric()
                             ->default(0),
-                        Textarea::make('description')
-                            ->label('Descrizione')
-                            ->maxLength(1000)
-                            ->columnSpanFull(),
                     ]),
                 Section::make('Dashboard budget')
                     ->visible(fn (?WorkPackage $record): bool => $record !== null)
@@ -132,6 +128,14 @@ class WorkPackageForm
 
                                 return "€ {$snapshot->totalRevenue}";
                             }),
+                    ]),
+
+                Section::make()
+                    ->columnSpanFull()
+                    ->schema([
+                        MarkdownEditor::make('description')
+                            ->label('Descrizione')
+                            ->columnSpanFull(),
                     ]),
             ]);
     }

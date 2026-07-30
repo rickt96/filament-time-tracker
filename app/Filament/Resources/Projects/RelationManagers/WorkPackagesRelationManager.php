@@ -10,6 +10,7 @@ use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\MarkdownEditor;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -48,6 +49,9 @@ class WorkPackagesRelationManager extends RelationManager
                     ->label('Ordinamento')
                     ->numeric()
                     ->default(0),
+                MarkdownEditor::make('description')
+                    ->label('Descrizione')
+                    ->columnSpanFull(),
             ]);
     }
 

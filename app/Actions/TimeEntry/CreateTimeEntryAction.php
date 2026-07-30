@@ -27,8 +27,7 @@ class CreateTimeEntryAction
     {
         $project = Project::findOrFail((int) $data['project_id']);
 
-        // TEMP IMPORT
-        //$this->eligibility->assertProjectSelectable($project);
+        $this->eligibility->assertProjectSelectable($project);
 
         [$startedAt, $endedAt] = $this->calculator->resolveTimes($data);
 
@@ -40,8 +39,8 @@ class CreateTimeEntryAction
 
         $timeEntry = DB::transaction(function () use ($user, $data, $project, $startedAt, $endedAt) {
 
-            // TEMP IMPORT
-            //$this->eligibility->assertNoOverlap($user->id, $startedAt, $endedAt);
+            // consento l'overlap
+            // $this->eligibility->assertNoOverlap($user->id, $startedAt, $endedAt);
 
             $task = filled($data['task_id'] ?? null)
                         ? Task::find((int) $data['task_id'])

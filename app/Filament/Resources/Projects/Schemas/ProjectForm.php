@@ -12,11 +12,8 @@ use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\ToggleButtons;
 use Filament\Schemas\Components\Section;
-use Filament\Schemas\Components\Tabs;
-use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Schema;
 use Illuminate\Support\HtmlString;
 
@@ -27,46 +24,46 @@ class ProjectForm
         return $schema
             ->components([
 
-            Section::make()
-                ->columns(3)
-                ->columnSpanFull()
-                ->components([
-                    TextInput::make('name')
-                        ->columnSpan(2)
-                        ->label('Nome')
-                        ->required()
-                        ->maxLength(255),
-                    ColorPicker::make('color')
-                        ->columnSpan(1)
-                        ->label('Colore'),
-                    Select::make('client_id')
-                        ->label('Cliente')
-                        ->relationship(
-                            name: 'client',
-                            titleAttribute: 'name',
-                            modifyQueryUsing: fn ($query) => $query->where('is_active', true),
-                        )
-                        ->searchable()
-                        ->preload()
-                        ->required(),
-                    Textarea::make('description')
-                        ->label('Descrizione')
-                        ->maxLength(1000)
-                        ->columnSpanFull(),
-                    ToggleButtons::make('status')
-                        ->label('Stato')
-                        ->options(ProjectStatus::class)
-                        ->default(ProjectStatus::Active)
-                        ->inline()
-                        ->required(),
-                    ToggleButtons::make('visibility')
-                        ->label('Visibilità')
-                        ->options(ProjectVisibility::class)
-                        ->default(ProjectVisibility::Public)
-                        ->inline()
-                        ->required()
-                ]),
-                
+                Section::make()
+                    ->columns(3)
+                    ->columnSpanFull()
+                    ->components([
+                        TextInput::make('name')
+                            ->columnSpan(2)
+                            ->label('Nome')
+                            ->required()
+                            ->maxLength(255),
+                        ColorPicker::make('color')
+                            ->columnSpan(1)
+                            ->label('Colore'),
+                        Select::make('client_id')
+                            ->label('Cliente')
+                            ->relationship(
+                                name: 'client',
+                                titleAttribute: 'name',
+                                modifyQueryUsing: fn ($query) => $query->where('is_active', true),
+                            )
+                            ->searchable()
+                            ->preload()
+                            ->required(),
+                        Textarea::make('description')
+                            ->label('Descrizione')
+                            ->maxLength(1000)
+                            ->columnSpanFull(),
+                        ToggleButtons::make('status')
+                            ->label('Stato')
+                            ->options(ProjectStatus::class)
+                            ->default(ProjectStatus::Active)
+                            ->inline()
+                            ->required(),
+                        ToggleButtons::make('visibility')
+                            ->label('Visibilità')
+                            ->options(ProjectVisibility::class)
+                            ->default(ProjectVisibility::Public)
+                            ->inline()
+                            ->required(),
+                    ]),
+
                 Section::make('Note')
                     ->columnSpanFull()
                     ->schema([
@@ -171,7 +168,7 @@ class ProjectForm
                                 return $snapshot->economicBudgetRemaining !== null ? "€ {$snapshot->economicBudgetRemaining}" : '—';
                             }),
                     ]),*/
-                
+
             ]);
     }
 }

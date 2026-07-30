@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
 use Database\Factories\TaskFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -11,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
+use Parallax\FilamentComments\Models\Traits\HasFilamentComments;
 
 /**
  * @property int $id
@@ -18,23 +20,28 @@ use Illuminate\Support\Carbon;
  * @property string $name
  * @property string|null $description
  * @property TaskStatus $status
+ * @property TaskPriority $priority
+ * @property Carbon|null $expire
  * @property int|null $assignee_id
  * @property string|null $external_id
+ * @property string|null $url
  * @property string|null $import_old_id
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
  */
-#[Fillable(['work_package_id', 'name', 'description', 'status', 'assignee_id', 'external_id', 'import_old_id'])]
+#[Fillable(['work_package_id', 'name', 'description', 'status', 'priority', 'expire', 'assignee_id', 'external_id', 'url', 'import_old_id'])]
 class Task extends Model
 {
     /** @use HasFactory<TaskFactory> */
-    use HasFactory, SoftDeletes;
+    use HasFactory, HasFilamentComments, SoftDeletes;
 
     protected function casts(): array
     {
         return [
             'status' => TaskStatus::class,
+            'priority' => TaskPriority::class,
+            'expire' => 'datetime',
         ];
     }
 

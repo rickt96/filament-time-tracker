@@ -14,8 +14,11 @@ return new class extends Migration
             $table->string('name');
             $table->text('description')->nullable();
             $table->string('status')->default('todo');
+            $table->string('priority')->default('media');
+            $table->dateTime('expire')->nullable();
             $table->foreignId('assignee_id')->nullable()->constrained('users')->nullOnDelete();
             $table->string('external_id')->nullable(); // id risorsa gestionale esterno (es. Clickup)
+            $table->string('url')->nullable(); // link diretto alla risorsa esterna (es. task Clickup/Jira)
             $table->string('import_old_id')->nullable(); // id task importato (es. Clockify)
             $table->timestamps();
             $table->softDeletes();

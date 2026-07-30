@@ -6,6 +6,8 @@ use App\Actions\Sync\SyncTimeEntryAction;
 use App\Actions\TimeEntry\DuplicateTimeEntryAction;
 use App\Actions\TimeEntry\UpdateTimeEntryAction;
 use App\Enums\TimeEntrySyncStatus;
+use App\Filament\Support\TaskDetailsAction;
+use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Support\DurationFormatter;
 use Filament\Actions\Action;
@@ -56,13 +58,13 @@ class TimeEntriesTable
             // an Eloquent relation, so Filament's automatic per-column eager
             // loading can't detect it — load it explicitly to avoid an N+1 on
             // every row alongside the other relations shown in this table.
-            ->modifyQueryUsing(fn (Builder $query) => $query->with(['project.client', 'task', 'user', 'tags']))
+            ->modifyQueryUsing(fn (Builder $query) => $query->with(['project.client', 'task.workPackage', 'user', 'tags']))
             ->columns([
                 TextInputColumn::make('description')
                     ->label('')
                     ->placeholder('Aggiungi descrizione')
-                    ->tooltip(fn($state) => $state)
-                    ->afterStateUpdated(function() {
+                    ->tooltip(fn ($state) => $state)
+                    ->afterStateUpdated(function () {
                         Notification::make()
                             ->success()
                             ->title('Descrizione aggiornata')
@@ -71,19 +73,36 @@ class TimeEntriesTable
                 TextColumn::make('project.name')
                     ->label('')
                     ->getStateUsing(fn (TimeEntry $record): string => "{$record->project->name} ({$record->client->name})")
-                    ->color(fn($record) => Color::hex($record->project?->color))
+                    ->color(fn ($record) => $record->project?->color ? Color::hex($record->project?->color) : 'gray')
                     ->badge(),
-                SelectColumn::make('task_id')
+                TextColumn::make('task')
+                    ->label('')
+                    ->formatStateUsing(fn ($state) => $state->name)
+                    ->description(fn ($state) => $state->workPackage?->name, 'above')
+                    ->action(TaskDetailsAction::make(fn (TimeEntry $record): ?Task => $record->task))
+                    ->placeholder('—'),
+
+                /*
+                TextColumn::make('projects')
+                    ->label('Progetti')
+                    // ->getStateUsing(fn ($record) => $record->projects) superfluo
+                    ->formatStateUsing(fn ($state) => $state->name)
+                    ->badge()
+                    ->color(fn ($state) => filled($state->color) ? Color::hex($state->color) : 'gray'), */
+
+                /* SelectColumn::make('task_id')
                     ->label('')
                     ->optionsRelationship(
                         name: 'task',
                         titleAttribute: 'name',
-                        modifyQueryUsing: fn (Builder $query, TimeEntry $record) => $query->whereHas(
-                            'workPackage',
-                            fn (Builder $query) => $query->where('project_id', $record->project_id),
-                        ),
+                        modifyQueryUsing: fn (Builder $query, TimeEntry $record) => $query
+                            ->whereHas(
+                                'workPackage',
+                                fn (Builder $query) => $query->where('project_id', $record->project_id),
+                            )
+                            ->whereNotIn('status', [TaskStatus::Done, TaskStatus::Cancelled]),
                     )
-                    ->placeholder('—'),
+                    ->placeholder('—'), */
                 TextColumn::make('started_at')
                     ->label('')
                     ->getStateUsing(fn (TimeEntry $record): string => $record->started_at->format('H:i').' - '.($record->ended_at?->format('H:i') ?? '…')),
@@ -173,9 +192,9 @@ class TimeEntriesTable
 
                             $notification->send();
                         }),
-                    DeleteAction::make()
-                ])
-                
+                    DeleteAction::make(),
+                ]),
+
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
@@ -195,6 +214,7 @@ class TimeEntriesTable
                     RestoreBulkAction::make(),
                 ]),
             ])
+            ->recordUrl(null)
             ->paginated([50, 100, 200])
             ->defaultPaginationPageOption(50)
             ->paginationMode(PaginationMode::Default);

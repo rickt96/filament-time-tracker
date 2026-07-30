@@ -53,17 +53,17 @@ class ClientForm
                             ->label('Driver')
                             ->options(ClientSyncDriver::class)
                             ->native(false)
-                            ->afterStateUpdated(function($set, $state) {
-                                if($state) {
-                                    $set("sync_configuration", $state->defaultConfig());
+                            ->afterStateUpdated(function ($set, $state) {
+                                if ($state) {
+                                    $set('sync_configuration', $state->defaultConfig());
                                 } else {
-                                    $set("sync_configuration", null);
+                                    $set('sync_configuration', null);
                                 }
                             })
                             ->live(),
                         KeyValue::make('sync_configuration')
                             ->label('Configurazione')
-                            ->visible(fn($get) => $get("sync_driver") != null)
+                            ->visible(fn ($get) => $get('sync_driver') != null)
                             ->columnSpanFull(),
                     ]),
             ]);

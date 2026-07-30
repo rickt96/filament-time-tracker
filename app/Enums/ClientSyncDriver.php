@@ -21,8 +21,8 @@ enum ClientSyncDriver: string implements HasLabel
     {
         return match ($this) {
             self::ClickUp => [
-                "team" => "",
-                "api_key" => ""
+                'team' => '',
+                'api_key' => '',
             ],
             self::Jira => [
                 // TODO

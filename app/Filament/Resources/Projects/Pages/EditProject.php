@@ -8,9 +8,6 @@ use App\Filament\Resources\Projects\RelationManagers\WorkPackagesRelationManager
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ForceDeleteAction;
 use Filament\Actions\RestoreAction;
-use Filament\Forms\Components\ColorPicker;
-use Filament\Forms\Components\MarkdownEditor;
-use Filament\Forms\Components\RichEditor;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Schemas\Components\Livewire;
 use Filament\Schemas\Components\Tabs;
@@ -54,7 +51,7 @@ class EditProject extends EditRecord
     #[Override]
     public function getContentTabLabel(): ?string
     {
-        return "Impostazioni";
+        return 'Impostazioni';
     }
 
     /* public function getContentTabIcon(): string|\BackedEnum|null
@@ -65,7 +62,7 @@ class EditProject extends EditRecord
     /**
      * customizzazione tabs
      */
-    public function content(Schema $schema): Schema
+    /* public function content(Schema $schema): Schema
     {
         $ownerRecord = $this->getRecord();
         $managerLivewireData = ['ownerRecord' => $ownerRecord, 'pageClass' => static::class];
@@ -99,5 +96,5 @@ class EditProject extends EditRecord
                         ]),
                 ]),
         ]);
-    }
+    } */
 }

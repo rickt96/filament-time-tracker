@@ -16,7 +16,7 @@ enum TimeEntrySyncStatus: string implements HasColor, HasLabel
         return match ($this) {
             self::Pending => 'In attesa',
             self::Synced => 'Sincronizzato',
-            self::Failed => 'Fallito',
+            self::Failed => 'Fallito'
         };
     }
 
@@ -25,7 +25,7 @@ enum TimeEntrySyncStatus: string implements HasColor, HasLabel
         return match ($this) {
             self::Pending => 'gray',
             self::Synced => 'success',
-            self::Failed => 'danger',
+            self::Failed => 'danger'
         };
     }
 }

@@ -15,6 +15,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use UnitEnum;
 
@@ -22,7 +23,7 @@ class ClientResource extends Resource
 {
     protected static ?string $model = Client::class;
 
-    protected static string|UnitEnum|null $navigationGroup = "Gestione";
+    protected static string|UnitEnum|null $navigationGroup = 'Gestione';
 
     protected static ?int $navigationSort = 100;
 
@@ -62,5 +63,16 @@ class ClientResource extends Resource
             ->withoutGlobalScopes([
                 SoftDeletingScope::class,
             ]);
+    }
+
+    /**
+     * No extra context needed here — the Client's name (already the global
+     * search result title) is sufficiently identifying on its own.
+     *
+     * @return array<string, string>
+     */
+    public static function getGlobalSearchResultDetails(Model $record): array
+    {
+        return [];
     }
 }
