@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\HtmlString;
 
 /**
  * @property int $id
@@ -34,6 +35,7 @@ use Illuminate\Support\Carbon;
  * @property TimeEntrySyncStatus|null $sync_status
  * @property string|null $sync_error
  * @property string|null $import_old_id
+ * @property array<int, string>|null $tags
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
@@ -42,7 +44,7 @@ use Illuminate\Support\Carbon;
 #[Fillable([
     'user_id', 'project_id', 'task_id', 'work_package_id', 'description', 'date', 'started_at', 'ended_at',
     'duration_seconds', 'status', 'hourly_rate', 'total_amount', 'synced_at', 'sync_status', 'sync_error',
-    'import_old_id',
+    'import_old_id', 'tags',
 ])]
 class TimeEntry extends Model implements Eventable
 {
@@ -60,6 +62,7 @@ class TimeEntry extends Model implements Eventable
             'total_amount' => 'decimal:2',
             'synced_at' => 'datetime',
             'sync_status' => TimeEntrySyncStatus::class,
+            'tags' => 'array',
         ];
     }
 
@@ -96,11 +99,11 @@ class TimeEntry extends Model implements Eventable
     }
 
     /**
-     * @return BelongsToMany<Tag, $this>
+     * @return BelongsToMany<Invoice, $this>
      */
-    public function tags(): BelongsToMany
+    public function invoices(): BelongsToMany
     {
-        return $this->belongsToMany(Tag::class, 'tag_time_entry')
+        return $this->belongsToMany(Invoice::class, 'invoice_time_entry')
             ->withTimestamps();
     }
 
@@ -116,8 +119,14 @@ class TimeEntry extends Model implements Eventable
 
     public function toCalendarEvent(): CalendarEvent
     {
+        $primary = $this->task?->name ?? $this->project->name;
+
+        $title = $this->description
+            ? new HtmlString(e($primary).'<br>'.e($this->description))
+            : $primary;
+
         return CalendarEvent::make($this)
-            ->title($this->description ?: $this->project->name)
+            ->title($title)
             ->start($this->started_at)
             ->end($this->ended_at ?? $this->started_at)
             ->backgroundColor($this->project->color)

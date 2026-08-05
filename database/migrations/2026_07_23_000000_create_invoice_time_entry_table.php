@@ -8,18 +8,18 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('tag_time_entry', function (Blueprint $table) {
+        Schema::create('invoice_time_entry', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('tag_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('invoice_id')->constrained()->cascadeOnDelete();
             $table->foreignId('time_entry_id')->constrained()->cascadeOnDelete();
             $table->timestamps();
 
-            $table->unique(['tag_id', 'time_entry_id']);
+            $table->unique(['invoice_id', 'time_entry_id']);
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('tag_time_entry');
+        Schema::dropIfExists('invoice_time_entry');
     }
 };

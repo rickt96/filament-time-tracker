@@ -2,6 +2,7 @@
 
 namespace Mokhosh\FilamentKanban\Pages;
 
+use BackedEnum;
 use Filament\Pages\Page;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -14,9 +15,18 @@ class KanbanBoard extends Page
     use HasEditRecordModal;
     use HasStatusChange;
 
-    protected static ?string $navigationIcon = 'heroicon-o-document-text';
+    /**
+     * Filament v5 compatibility: `Filament\Pages\Page` declares this as
+     * `string|BackedEnum|null`, so the narrower `?string` of the upstream
+     * package is a fatal property type mismatch.
+     */
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-document-text';
 
-    protected static string $view = 'filament-kanban::kanban-board';
+    /**
+     * Filament v5 compatibility: `Filament\Pages\BasePage::$view` is an
+     * instance property, so it cannot be redeclared as static here.
+     */
+    protected string $view = 'filament-kanban::kanban-board';
 
     protected static string $headerView = 'filament-kanban::kanban-header';
 

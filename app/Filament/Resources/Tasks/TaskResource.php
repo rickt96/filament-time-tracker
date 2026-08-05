@@ -29,9 +29,9 @@ class TaskResource extends Resource
 {
     protected static ?string $model = Task::class;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Gestione';
+    protected static string|UnitEnum|null $navigationGroup = 'Anagrafiche';
 
-    protected static ?int $navigationSort = 100;
+    protected static ?int $navigationSort = 130;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
@@ -114,7 +114,7 @@ class TaskResource extends Resource
     public static function getGlobalSearchResultActions(Model $record): array
     {
         return [
-            EditAction::make(),
+            //EditAction::make(),
             // ->icon(Heroicon::PencilSquare),
             Action::make('create-time-entry')
                 ->label('Crea time entry')

@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Invoices\Schemas;
 
 use App\Enums\InvoiceStatus;
+use App\Models\Invoice;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\MarkdownEditor;
@@ -43,7 +44,13 @@ class InvoiceForm
                         TextInput::make('number')
                             ->label('Numero anno')
                             ->numeric()
-                            ->required(),
+                            ->required()
+                            ->default(function() { 
+                                $maxYearNumber = Invoice::query()->where('year', now()->year)->max('number');
+                                return ($maxYearNumber != null)
+                                            ? $maxYearNumber + 1 
+                                            : 1;
+                            }),
                         TextInput::make('amount')
                             ->label('Importo')
                             ->numeric()

@@ -1,0 +1,17 @@
+@import '../../../../vendor/filament/filament/resources/css/theme.css';
+
+@source '../../../../app/Filament/**/*';
+@source '../../../../resources/views/filament/**/*';
+
+/*
+ * The kanban board ships its own blade views; without this the utilities they
+ * use are never generated. Its own `resources/dist/filament-kanban.css` is a
+ * Tailwind v3 build (preflight included) and is deliberately not registered as
+ * a Filament asset — see FilamentKanbanServiceProvider::getAssets().
+ */
+@source '../../../../packages/mokhosh/filament-kanban/resources/views/**/*';
+
+/* mokhosh/filament-kanban: cursor feedback while a card is being dragged. */
+.grabbing * {
+    cursor: grabbing !important;
+}

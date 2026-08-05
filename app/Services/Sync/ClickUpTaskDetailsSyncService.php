@@ -62,14 +62,14 @@ class ClickUpTaskDetailsSyncService
         try {
             $response = Http::withHeaders(['Authorization' => $apiKey])->get($url);
         } catch (Throwable $exception) {
-            $this->logRaw($task, $url, error: $exception->getMessage());
+            $this->logRaw($task, $url, error: $exception->getMessage(), dryRun: $dryRun);
             $summary->tasksFailed++;
             $summary->warn("Task #{$task->id} [{$task->external_id}]: errore di rete — {$exception->getMessage()}");
 
             return;
         }
 
-        $this->logRaw($task, $url, $response);
+        $this->logRaw($task, $url, $response, dryRun: $dryRun);
 
         if ($response->failed()) {
             $summary->tasksFailed++;
@@ -114,16 +114,31 @@ class ClickUpTaskDetailsSyncService
         $summary->tasksUpdated++;
     }
 
-    private function logRaw(Task $task, string $url, ?Response $response = null, ?string $error = null): void
+    private function logRaw(Task $task, string $url, ?Response $response = null, ?string $error = null, bool $dryRun = false): void
     {
-        Log::channel('sync')->info('ClickUp task details sync', [
+        $context = [
             'provider' => 'clickup',
             'task_id' => $task->id,
             'clickup_task_id' => $task->external_id,
             'url' => $url,
             'response_status' => $response?->status(),
+            // The payload ClickUp returned — decoded when it is JSON, the raw
+            // body otherwise (error pages, empty responses).
             'response_body' => $response?->json() ?? $response?->body(),
             'error' => $error,
-        ]);
+        ];
+
+        Log::channel('sync')->info('ClickUp task details sync', $context);
+
+        // Same trail, but hanging off the synced Task so it can be audited
+        // from the record itself instead of grepping the log file.
+        activity('clickup-sync')
+            ->on($task)
+            ->withProperties([
+                ...$context,
+                'successful' => $error === null && $response?->successful() === true,
+                'dry_run' => $dryRun,
+            ])
+            ->log('Sincronizzazione dettagli task da ClickUp');
     }
 }

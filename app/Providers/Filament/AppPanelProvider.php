@@ -34,6 +34,9 @@ class AppPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Blue,
             ])
+            // Custom theme so the utilities used by our own Filament views and
+            // by the kanban board's blade views get compiled.
+            ->viteTheme('resources/css/filament/app/theme.css')
             ->tenant(Workspace::class)
             ->tenantMenu()
             ->tenantRegistration(RegisterWorkspace::class)

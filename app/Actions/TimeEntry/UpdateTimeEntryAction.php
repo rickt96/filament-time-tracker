@@ -67,11 +67,8 @@ class UpdateTimeEntryAction
                 'ended_at' => $endedAt,
                 'duration_seconds' => $durationSeconds,
                 'total_amount' => $this->calculator->amount($durationSeconds, $timeEntry->hourly_rate),
+                'tags' => array_key_exists('tags', $data) ? $data['tags'] : $timeEntry->tags,
             ]);
-
-            if (array_key_exists('tags', $data)) {
-                $timeEntry->tags()->sync($data['tags']);
-            }
 
             return $timeEntry->refresh();
         });

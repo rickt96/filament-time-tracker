@@ -26,6 +26,7 @@ return new class extends Migration
             $table->timestamp('synced_at')->nullable();
             $table->string('sync_status')->nullable();
             $table->text('sync_error')->nullable();
+            $table->json('tags')->nullable();
             $table->timestamps();
             $table->softDeletes();
 

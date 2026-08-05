@@ -94,14 +94,29 @@ class ClickUpDriver implements SyncDriverInterface
      */
     private function logRaw(TimeEntry $timeEntry, string $url, array $payload, ?Response $response = null, ?string $error = null): void
     {
-        Log::channel('sync')->info('ClickUp time entry sync', [
+        $context = [
             'provider' => 'clickup',
             'time_entry_id' => $timeEntry->id,
+            'clickup_task_id' => $timeEntry->task?->external_id,
             'url' => $url,
             'request' => $payload,
             'response_status' => $response?->status(),
+            // The payload ClickUp returned — decoded when it is JSON, the raw
+            // body otherwise (error pages, empty responses).
             'response_body' => $response?->json() ?? $response?->body(),
             'error' => $error,
-        ]);
+        ];
+
+        Log::channel('sync')->info('ClickUp time entry sync', $context);
+
+        // Same trail, but hanging off the synced Time Entry so it can be
+        // audited from the record itself instead of grepping the log file.
+        activity('clickup-sync')
+            ->on($timeEntry)
+            ->withProperties([
+                ...$context,
+                'successful' => $error === null && $response?->successful() === true,
+            ])
+            ->log('Sincronizzazione time entry su ClickUp');
     }
 }

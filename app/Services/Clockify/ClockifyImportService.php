@@ -10,7 +10,6 @@ use App\Enums\WorkPackageStatus;
 use App\Enums\WorkspaceRole;
 use App\Models\Client;
 use App\Models\Project;
-use App\Models\Tag;
 use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\User;
@@ -39,12 +38,13 @@ use Throwable;
  * - Only the API key owner's time entries are fetched (this is a
  *   single-user personal migration, not a multi-user one).
  *
- * Re-running the import is safe: Clients/Projects/Tags/Tasks are matched by
- * name (Tasks within their Work Package), and Time Entries are matched by
+ * Re-running the import is safe: Clients/Projects/Tasks are matched by name
+ * (Tasks within their Work Package), and Time Entries are matched by
  * Clockify's own id stored in import_old_id, so already-imported records are
  * left alone rather than duplicated. Task.import_old_id also stores
  * Clockify's own task id, but only for traceability — it isn't used as a
- * match key.
+ * match key. Tags are freeform strings copied verbatim onto each Time Entry,
+ * so there's no separate entity to match/dedupe.
  */
 class ClockifyImportService
 {
@@ -94,7 +94,7 @@ class ClockifyImportService
             $taskMap = $this->importTasks($clockifyWorkspaceId, $projectMap, $clockifyUserId, $localUser, $summary, $report);
 
             $report('Importazione tag...');
-            $tagMap = $this->importTags($workspace, $clockifyWorkspaceId);
+            $tagMap = $this->importTags($clockifyWorkspaceId);
 
             $report('Importazione time entry...');
             $this->importTimeEntries(
@@ -322,18 +322,14 @@ class ClockifyImportService
     }
 
     /**
-     * @return array<string, Tag> Clockify tag id => local Tag
+     * @return array<string, string> Clockify tag id => tag name
      */
-    private function importTags(Workspace $workspace, string $clockifyWorkspaceId): array
+    private function importTags(string $clockifyWorkspaceId): array
     {
         $map = [];
 
         foreach ($this->client->tags($clockifyWorkspaceId) as $clockifyTag) {
-            $tag = Tag::query()->firstOrCreate(
-                ['workspace_id' => $workspace->id, 'name' => $clockifyTag['name']],
-            );
-
-            $map[(string) $clockifyTag['id']] = $tag;
+            $map[(string) $clockifyTag['id']] = $clockifyTag['name'];
         }
 
         return $map;
@@ -342,7 +338,7 @@ class ClockifyImportService
     /**
      * @param  array<string, Project>  $projectMap
      * @param  array<string, Task>  $taskMap
-     * @param  array<string, Tag>  $tagMap
+     * @param  array<string, string>  $tagMap  Clockify tag id => tag name
      */
     private function importTimeEntries(
         string $clockifyWorkspaceId,
@@ -398,8 +394,8 @@ class ClockifyImportService
 
             $clockifyTagIds = (array) ($entry['tagIds'] ?? []);
 
-            $tagIds = collect($clockifyTagIds)
-                ->map(fn (mixed $tagId): mixed => $tagMap[(string) $tagId]->id ?? null)
+            $tagNames = collect($clockifyTagIds)
+                ->map(fn (mixed $tagId): ?string => $tagMap[(string) $tagId] ?? null)
                 ->filter()
                 ->values()
                 ->all();
@@ -412,7 +408,7 @@ class ClockifyImportService
                     'date' => Carbon::parse($start)->toDateString(),
                     'started_at' => $start,
                     'ended_at' => $end,
-                    'tags' => $tagIds,
+                    'tags' => $tagNames,
                 ]);
 
                 $timeEntry->update(['import_old_id' => $clockifyEntryId]);

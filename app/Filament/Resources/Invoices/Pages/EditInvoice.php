@@ -28,4 +28,10 @@ class EditInvoice extends EditRecord
     {
         return 'Modifica '.$this->record->year.'-'.$this->record->number;
     }
+
+    #[Override]
+    public function hasCombinedRelationManagerTabsWithContent(): bool
+    {
+        return true;
+    }
 }

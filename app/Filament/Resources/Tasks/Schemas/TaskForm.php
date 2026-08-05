@@ -4,10 +4,15 @@ namespace App\Filament\Resources\Tasks\Schemas;
 
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
+use App\Filament\Forms\Components\RichEditor\RichContentCustomBlocks\ChecklistBlock;
+use App\Models\Task;
+use App\Models\WorkPackage;
+use App\Support\TagOptions;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -20,17 +25,20 @@ class TaskForm
     {
         return $schema
             ->components([
-                Section::make(null)
+                Section::make('Dettagli')
                     ->columns(2)
                     ->inlineLabel()
                     ->columnSpanFull()
                     ->components([
-                        /* TextInput::make('name')
+                        TextInput::make('name')
                             ->label('Nome')
+                            ->inlineLabel(false)
                             ->required()
                             ->maxLength(255)
-                            ->columnSpanFull(), */
-                        Select::make('work_package_id')
+                            ->columnSpanFull()
+                            ->visibleOn('create'),
+                        // basic
+                        /* Select::make('work_package_id')
                             ->label('Work Package')
                             ->relationship(
                                 name: 'workPackage',
@@ -42,7 +50,22 @@ class TaskForm
                             )
                             ->searchable()
                             ->preload()
-                            ->required(),
+                            ->required(), */
+
+                        Select::make('work_package_id')
+                            ->label('Work Package')
+                            ->options(fn (): array => WorkPackage::query()
+                                ->with('project')
+                                ->whereHas('project', fn (Builder $query) => $query->where('workspace_id', Filament::getTenant()?->getKey()))
+                                ->get()
+                                ->mapWithKeys(fn (WorkPackage $workPackage): array => [
+                                    $workPackage->id => "{$workPackage->project->name} — {$workPackage->name}",
+                                ])
+                                ->all()
+                            )
+                            ->required()
+                            ->searchable(),
+
                         Select::make('status')
                             ->label('Stato')
                             ->options(TaskStatus::class)
@@ -73,11 +96,42 @@ class TaskForm
                             ->label('ID import legacy')
                             ->maxLength(255)
                             ->disabled(), */
+                        TagsInput::make('tags')
+                            ->inlineLabel()
+                            ->label('Tag')
+                            ->suggestions(fn (): array => array_values(TagOptions::from(
+                                Task::query()->whereHas(
+                                    'workPackage.project',
+                                    fn (Builder $query) => $query->where('workspace_id', Filament::getTenant()?->getKey()),
+                                ),
+                            )))
+                            ->columnSpanFull(),
                     ]),
-
-                RichEditor::make('description')
-                    ->label('Descrizione')
-                    ->columnSpanFull(),
+                Section::make('Descrizione')
+                    ->columnSpanFull()
+                    ->schema([
+                        RichEditor::make('description')
+                            ->hiddenLabel()
+                            ->floatingToolbars([
+                                'paragraph' => [
+                                    'bold', 'italic', 'underline', 'strike', 'subscript', 'superscript',
+                                ],
+                                'heading' => [
+                                    'h1', 'h2', 'h3',
+                                ],
+                                'table' => [
+                                    'tableAddColumnBefore', 'tableAddColumnAfter', 'tableDeleteColumn',
+                                    'tableAddRowBefore', 'tableAddRowAfter', 'tableDeleteRow',
+                                    'tableMergeCells', 'tableSplitCell',
+                                    'tableToggleHeaderRow', 'tableToggleHeaderCell',
+                                    'tableDelete',
+                                ],
+                            ])
+                            ->customBlocks([
+                                ChecklistBlock::class,
+                            ])
+                            ->columnSpanFull(),
+                    ]),
             ]);
     }
 }

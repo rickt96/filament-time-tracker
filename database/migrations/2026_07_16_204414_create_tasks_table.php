@@ -20,6 +20,8 @@ return new class extends Migration
             $table->string('external_id')->nullable(); // id risorsa gestionale esterno (es. Clickup)
             $table->string('url')->nullable(); // link diretto alla risorsa esterna (es. task Clickup/Jira)
             $table->string('import_old_id')->nullable(); // id task importato (es. Clockify)
+            $table->string('notion_id')->nullable();
+            $table->json('tags')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

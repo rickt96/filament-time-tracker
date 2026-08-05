@@ -3,7 +3,6 @@
 namespace Mokhosh\FilamentKanban;
 
 use Filament\Support\Assets\Asset;
-use Filament\Support\Assets\Css;
 use Filament\Support\Facades\FilamentAsset;
 use Illuminate\Filesystem\Filesystem;
 use Livewire\Features\SupportTesting\Testable;
@@ -45,7 +44,7 @@ class FilamentKanbanServiceProvider extends PackageServiceProvider
 
         // Handle Stubs
         if (app()->runningInConsole()) {
-            foreach (app(Filesystem::class)->files(__DIR__ . '/../stubs/') as $file) {
+            foreach (app(Filesystem::class)->files(__DIR__.'/../stubs/') as $file) {
                 $this->publishes([
                     $file->getRealPath() => base_path("stubs/filament-kanban/{$file->getFilename()}"),
                 ], 'filament-kanban-stubs');
@@ -69,7 +68,15 @@ class FilamentKanbanServiceProvider extends PackageServiceProvider
         return [
             // AlpineComponent::make('filament-kanban', __DIR__ . '/../resources/dist/components/filament-kanban.js'),
             // Js::make('filament-kanban-scripts', __DIR__ . '/../resources/dist/filament-kanban.js'),
-            Css::make('filament-kanban-styles', __DIR__ . '/../resources/dist/filament-kanban.css'),
+
+            // `resources/dist/filament-kanban.css` is a full Tailwind v3 build,
+            // preflight included, and this app runs Filament v5 / Tailwind v4 —
+            // loading it panel-wide would reset Filament's own styling. The
+            // utilities the kanban views need (plus the `.grabbing` rule) are
+            // compiled instead by the panel theme at
+            // `resources/css/filament/app/theme.css`, which `@source`s the views
+            // of this package.
+            // Css::make('filament-kanban-styles', __DIR__ . '/../resources/dist/filament-kanban.css'),
         ];
     }
 

@@ -3,6 +3,7 @@
 namespace App\Actions\TimeEntry;
 
 use App\Enums\TimeEntryStatus;
+use App\Enums\TimeEntrySyncStatus;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\TimeEntry;
@@ -67,11 +68,9 @@ class CreateTimeEntryAction
                 'status' => TimeEntryStatus::Completed,
                 'hourly_rate' => $hourlyRate,
                 'total_amount' => $this->calculator->amount($durationSeconds, $hourlyRate),
+                'sync_status' => TimeEntrySyncStatus::Pending,
+                'tags' => $data['tags'] ?? null,
             ]);
-
-            if (filled($data['tags'] ?? null)) {
-                $timeEntry->tags()->sync($data['tags']);
-            }
 
             return $timeEntry;
         });

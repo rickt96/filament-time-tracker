@@ -68,6 +68,20 @@ class Invoice extends Model
     }
 
     /**
+     * The Time Entries actually billed on this invoice. A Time Entry can
+     * appear on more than one Invoice (e.g. a partial bill followed later by
+     * a final one), so this is a many-to-many rather than a time_entries.
+     * invoice_id column.
+     *
+     * @return BelongsToMany<TimeEntry, $this>
+     */
+    public function timeEntries(): BelongsToMany
+    {
+        return $this->belongsToMany(TimeEntry::class, 'invoice_time_entry')
+            ->withTimestamps();
+    }
+
+    /**
      * @return Attribute<string, never>
      */
     protected function label(): Attribute

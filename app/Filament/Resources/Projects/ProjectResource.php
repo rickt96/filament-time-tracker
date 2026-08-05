@@ -26,9 +26,9 @@ class ProjectResource extends Resource
 {
     protected static ?string $model = Project::class;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Gestione';
+    protected static string|UnitEnum|null $navigationGroup = 'Anagrafiche';
 
-    protected static ?int $navigationSort = 100;
+    protected static ?int $navigationSort = 110;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentText;
 

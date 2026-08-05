@@ -25,12 +25,14 @@ use Parallax\FilamentComments\Models\Traits\HasFilamentComments;
  * @property int|null $assignee_id
  * @property string|null $external_id
  * @property string|null $url
+ * @property string|null $notion_id
  * @property string|null $import_old_id
+ * @property array<int, string>|null $tags
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
  */
-#[Fillable(['work_package_id', 'name', 'description', 'status', 'priority', 'expire', 'assignee_id', 'external_id', 'url', 'import_old_id'])]
+#[Fillable(['work_package_id', 'name', 'description', 'status', 'priority', 'expire', 'assignee_id', 'external_id', 'url', 'notion_id', 'import_old_id', 'tags'])]
 class Task extends Model
 {
     /** @use HasFactory<TaskFactory> */
@@ -42,6 +44,7 @@ class Task extends Model
             'status' => TaskStatus::class,
             'priority' => TaskPriority::class,
             'expire' => 'datetime',
+            'tags' => 'array',
         ];
     }
 

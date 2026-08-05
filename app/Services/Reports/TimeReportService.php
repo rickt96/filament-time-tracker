@@ -30,8 +30,8 @@ class TimeReportService
             ->when($filters['user_id'] ?? null, fn (Builder $query, $value) => $query->where('time_entries.user_id', $value))
             ->when($filters['task_id'] ?? null, fn (Builder $query, $value) => $query->where('time_entries.task_id', $value))
             ->when(
-                $filters['tag_id'] ?? null,
-                fn (Builder $query, $value) => $query->whereHas('tags', fn (Builder $query) => $query->where('tags.id', $value)),
+                $filters['tag'] ?? null,
+                fn (Builder $query, $value) => $query->whereJsonContains('time_entries.tags', $value),
             )
             ->when(
                 $filters['work_package_id'] ?? null,

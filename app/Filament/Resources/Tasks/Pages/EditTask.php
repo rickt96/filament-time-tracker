@@ -13,6 +13,7 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Support\HtmlString;
 use Override;
 use Parallax\FilamentComments\Actions\CommentsAction;
 
@@ -29,7 +30,18 @@ class EditTask extends EditRecord
     #[Override]
     public function getSubheading(): string|Htmlable|null
     {
-        return $this->record->workPackage?->project?->name ?? null;
+        return $this->record->workPackage?->project?->name;
+
+        /* if ($this->record->workPackage?->project) {
+            return new HtmlString(
+                '<span class="size-2 shrink-0 rounded-full" style="background-color: ' . ($this->record->workPackage?->project->color ?: '#9ca3af') . '"></span>' .
+                $this->record->workPackage?->project->name
+            );
+        }
+        else
+        {
+            return null;
+        } */
     }
 
     protected function getHeaderActions(): array
@@ -45,16 +57,17 @@ class EditTask extends EditRecord
                 ->modalHeading('Rinomina il task')
                 ->modalSubmitActionLabel('Salva')
                 ->fillForm(fn (Task $record): array => [
-                    'title' => $record->title,
+                    'name' => $record->name,
                 ])
-                ->form([
+                ->schema([
                     TextInput::make('name')
                         ->label('Titolo')
+                        ->hiddenLabel()
                         ->required()
                         ->maxLength(255),
                 ])
                 ->action(function (Task $record, array $data): void {
-                    $record->update(['title' => $data['title']]);
+                    $record->update(['name' => $data['name']]);
 
                     Notification::make()
                         ->success()

@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use Carbon\CarbonImmutable;
+use Filament\Tables\Enums\FiltersLayout;
+use Filament\Tables\Table;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
@@ -46,5 +48,13 @@ class AppServiceProvider extends ServiceProvider
                 ->uncompromised()
             : null,
         );
+
+        // default setting tabelle
+        Table::configureUsing(function (Table $table): void {
+            $table
+                ->paginated([25, 50, 100, 250])
+                ->defaultPaginationPageOption(50)
+                ->filtersLayout(FiltersLayout::Modal);
+        });
     }
 }

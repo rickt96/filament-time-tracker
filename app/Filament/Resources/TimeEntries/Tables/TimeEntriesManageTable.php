@@ -5,11 +5,16 @@ namespace App\Filament\Resources\TimeEntries\Tables;
 use App\Actions\Sync\SyncTimeEntryAction;
 use App\Actions\TimeEntry\DuplicateTimeEntryAction;
 use App\Actions\TimeEntry\UpdateTimeEntryAction;
+use App\Enums\InvoiceStatus;
 use App\Enums\TimeEntrySyncStatus;
+use App\Filament\Resources\Invoices\InvoiceResource;
 use App\Filament\Support\TaskDetailsAction;
+use App\Models\Invoice;
 use App\Models\Task;
 use App\Models\TimeEntry;
+use App\Services\Invoice\AttachTimeEntriesToInvoiceService;
 use App\Support\DurationFormatter;
+use App\Support\TagOptions;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkAction;
@@ -21,9 +26,20 @@ use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Radio;
+use Filament\Forms\Components\Repeater\TableColumn;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Support\Colors\Color;
+use Filament\Support\Enums\IconPosition;
+use Filament\Support\Enums\IconSize;
+use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Enums\PaginationMode;
 use Filament\Tables\Filters\Filter;
@@ -48,7 +64,9 @@ class TimeEntriesManageTable
     {
         return $table
             ->defaultSort('date', 'desc')
-            ->modifyQueryUsing(fn (Builder $query) => $query->with(['project.client', 'task.workPackage', 'user', 'tags']))
+            ->modifyQueryUsing(fn (Builder $query) => $query->with(['project.client', 'task.workPackage', 'user', 'invoices'])
+                // ->withCount('invoices')
+            )
             ->columns([
                 TextColumn::make('date')
                     ->label('Data')
@@ -56,7 +74,6 @@ class TimeEntriesManageTable
                     ->sortable(),
                 TextColumn::make('description')
                     ->label('Descrizione')
-                    ->searchable()
                     ->limit(40)
                     ->tooltip(fn (?string $state): ?string => $state)
                     ->placeholder('—')
@@ -64,16 +81,14 @@ class TimeEntriesManageTable
                 TextColumn::make('project.name')
                     ->label('Progetto')
                     ->getStateUsing(fn (TimeEntry $record): string => "{$record->project->name} ({$record->client->name})")
-                    ->searchable()
                     ->sortable()
                     ->color(fn ($record) => $record->project?->color ? Color::hex($record->project?->color) : 'gray')
                     ->badge(),
                 TextColumn::make('task.name')
                     ->label('Task')
                     ->action(TaskDetailsAction::make(fn (TimeEntry $record): ?Task => $record->task))
-                    ->searchable()
                     ->placeholder('—')
-                    ->description(fn ($record) => $record->workPackage?->project?->name, 'above'),
+                    ->description(fn ($record) => $record->workPackage?->name, 'above'),
                 /* TextColumn::make('user.name')
                     ->label('Utente')
                     ->searchable()
@@ -84,24 +99,73 @@ class TimeEntriesManageTable
                 TextColumn::make('duration_seconds')
                     ->label('Durata')
                     ->formatStateUsing(fn (int $state): string => DurationFormatter::hoursMinutesSeconds($state))
-                    ->sortable(),
+                    ->sortable()
+                    ->summarize(
+                        Sum::make()
+                            ->hiddenLabel()
+                            ->formatStateUsing(fn (int $state): string => DurationFormatter::hoursMinutesSeconds($state))
+                    ),
                 TextColumn::make('total_amount')
                     ->label('Importo')
                     ->money('EUR')
                     ->sortable()
-                    ->toggleable(),
+                    ->toggleable()
+                    ->summarize(
+                        Sum::make()
+                            ->money('EUR')
+                            ->hiddenLabel()
+                    ),
                 IconColumn::make('sync_status')
-                    ->label('Sincronizzazione')
-                    ->icon(fn (TimeEntry $record): string => $record->sync_status === TimeEntrySyncStatus::Synced
-                        ? 'heroicon-o-cloud-arrow-up'
-                        : 'heroicon-o-cloud')
-                    ->color(fn (TimeEntry $record): string => $record->sync_status === TimeEntrySyncStatus::Synced
-                        ? 'success'
-                        : 'gray')
+                    ->label('')
+                    ->icon(fn (TimeEntry $record): string => match ($record->sync_status) {
+                        TimeEntrySyncStatus::Synced => 'heroicon-o-cloud-arrow-up',
+                        default => 'heroicon-o-cloud'
+                    })
+                    ->size(IconSize::Medium)
+                    ->color(fn (TimeEntry $record): string => match ($record->sync_status) {
+                        TimeEntrySyncStatus::Synced => 'success',
+                        TimeEntrySyncStatus::Failed => 'warning',
+                        default => 'gray'
+                    })
                     ->tooltip(fn (TimeEntry $record): ?string => $record->sync_status === TimeEntrySyncStatus::Synced
                         ? $record->synced_at->format('d/m/Y H:i')
-                        : $record->sync_error)
-                    ->sortable(),
+                        : $record->sync_error
+                    ),
+                IconColumn::make('invoices')
+                    ->label('')
+                    ->icon('heroicon-o-currency-euro')
+                    ->size(IconSize::Medium)
+                    ->color(fn (TimeEntry $record): string => $record->invoices->isNotEmpty()
+                        ? 'success'
+                        : 'gray'
+                    )
+                    ->tooltip(fn (TimeEntry $record): string => $record->invoices->isNotEmpty()
+                        ? implode(', ', $record->invoices->pluck('label')->toArray())
+                        : 'Time entry non fatturata'
+                    )
+                    ->action(
+                        Action::make('invoices_details')
+                            ->schema(function ($record) {
+                                return [
+                                    RepeatableEntry::make('invoices')
+                                        ->hiddenLabel()
+                                        ->table([
+                                            TableColumn::make('Fattura'),
+                                            TableColumn::make('Cliente'),
+                                            TableColumn::make('Totale'),
+                                        ])
+                                        ->schema([
+                                            TextEntry::make('label')
+                                                ->url(fn ($record) => InvoiceResource::getUrl('edit', ['record' => $record]), true)
+                                                ->icon(Heroicon::ArrowTopRightOnSquare)
+                                                ->iconPosition(IconPosition::After),
+                                            TextEntry::make('client.name'),
+                                            TextEntry::make('amount')
+                                                ->money('EUR'),
+                                        ]),
+                                ];
+                            })
+                    ),
                 /* TextColumn::make('synced_at')
                     ->label('Sincronizzato il')
                     ->dateTime()
@@ -122,10 +186,12 @@ class TimeEntriesManageTable
                     }),
                 SelectFilter::make('project')
                     ->label('Progetto')
+                    ->multiple()
+                    ->preload()
                     ->relationship(
                         name: 'project',
                         titleAttribute: 'name',
-                        modifyQueryUsing: fn (Builder $query) => $query->where('workspace_id', Filament::getTenant()?->getKey()),
+                        modifyQueryUsing: fn (Builder $query) => $query->where('workspace_id', Filament::getTenant()?->getKey())->selectable(),
                     ),
                 SelectFilter::make('client')
                     ->label('Cliente')
@@ -136,7 +202,23 @@ class TimeEntriesManageTable
                     ),
                 SelectFilter::make('tags')
                     ->label('Tag')
-                    ->relationship('tags', 'name'),
+                    ->multiple()
+                    ->options(fn (): array => TagOptions::from(
+                        TimeEntry::query()->whereHas('project', fn (Builder $query) => $query->where('workspace_id', Filament::getTenant()?->getKey())),
+                    ))
+                    ->query(function (Builder $query, array $data): Builder {
+                        $values = $data['values'] ?? [];
+
+                        if (blank($values)) {
+                            return $query;
+                        }
+
+                        return $query->where(function (Builder $query) use ($values): void {
+                            foreach ($values as $value) {
+                                $query->orWhereJsonContains('tags', $value);
+                            }
+                        });
+                    }),
                 SelectFilter::make('user')
                     ->label('Utente')
                     ->relationship('user', 'name'),
@@ -204,6 +286,97 @@ class TimeEntriesManageTable
 
                             Notification::make()
                                 ->title("Sincronizzazione completata: {$synced} riuscite, {$failed} fallite")
+                                ->send();
+                        })
+                        ->deselectRecordsAfterCompletion(),
+                    BulkAction::make('attachToInvoice')
+                        ->label('Aggiungi a fattura')
+                        ->icon('heroicon-o-document-currency-euro')
+                        ->schema([
+                            Radio::make('mode')
+                                ->label('Fattura')
+                                ->options([
+                                    'existing' => 'Fattura esistente',
+                                    'new' => 'Nuova fattura',
+                                ])
+                                ->default('existing')
+                                ->live()
+                                ->inline()
+                                ->required(),
+                            Select::make('invoice_id')
+                                ->label('Fattura')
+                                ->options(fn (): array => Invoice::query()
+                                    ->where('workspace_id', Filament::getTenant()?->getKey())
+                                    ->with('client')
+                                    ->orderByDesc('year')
+                                    ->orderByDesc('number')
+                                    ->get()
+                                    ->mapWithKeys(fn (Invoice $invoice): array => [
+                                        $invoice->id => "{$invoice->year}/{$invoice->number} — {$invoice->client->name}",
+                                    ])
+                                    ->all())
+                                ->searchable()
+                                ->visible(fn (Get $get): bool => $get('mode') === 'existing')
+                                ->required(fn (Get $get): bool => $get('mode') === 'existing'),
+                            Select::make('client_id')
+                                ->label('Cliente')
+                                ->relationship(
+                                    name: 'client',
+                                    titleAttribute: 'name',
+                                    modifyQueryUsing: fn (Builder $query) => $query
+                                        ->where('workspace_id', Filament::getTenant()?->getKey())
+                                        ->where('is_active', true),
+                                )
+                                ->searchable()
+                                ->preload()
+                                ->visible(fn (Get $get): bool => $get('mode') === 'new')
+                                ->required(fn (Get $get): bool => $get('mode') === 'new'),
+                            TextInput::make('year')
+                                ->label('Anno')
+                                ->numeric()
+                                ->default(now()->year)
+                                ->visible(fn (Get $get): bool => $get('mode') === 'new')
+                                ->required(fn (Get $get): bool => $get('mode') === 'new'),
+                            TextInput::make('number')
+                                ->label('Numero anno')
+                                ->numeric()
+                                ->visible(fn (Get $get): bool => $get('mode') === 'new')
+                                ->required(fn (Get $get): bool => $get('mode') === 'new'),
+                            TextInput::make('amount')
+                                ->label('Importo')
+                                ->numeric()
+                                ->prefix('€')
+                                ->default(fn (Collection $records): string => number_format((float) $records->sum('total_amount'), 2, '.', ''))
+                                ->visible(fn (Get $get): bool => $get('mode') === 'new')
+                                ->required(fn (Get $get): bool => $get('mode') === 'new'),
+                        ])
+                        ->action(function (Collection $records, array $data): void {
+                            if ($data['mode'] === 'existing') {
+                                $invoice = Invoice::findOrFail((int) $data['invoice_id']);
+                            } else {
+                                $invoice = Invoice::create([
+                                    'workspace_id' => Filament::getTenant()?->getKey(),
+                                    'client_id' => $data['client_id'],
+                                    'year' => $data['year'],
+                                    'number' => $data['number'],
+                                    'amount' => $data['amount'],
+                                    'status' => InvoiceStatus::Draft,
+                                ]);
+
+                                // The Invoice's own "linked projects" should
+                                // already reflect what it's billing for the
+                                // moment it exists, not stay empty until
+                                // someone edits it manually.
+                                $invoice->projects()->syncWithoutDetaching(
+                                    $records->pluck('project_id')->unique(),
+                                );
+                            }
+
+                            $attached = app(AttachTimeEntriesToInvoiceService::class)->attach($records, $invoice);
+
+                            Notification::make()
+                                ->title("{$attached} time entry aggiunte alla fattura {$invoice->year}/{$invoice->number}")
+                                ->success()
                                 ->send();
                         })
                         ->deselectRecordsAfterCompletion(),

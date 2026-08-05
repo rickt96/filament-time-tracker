@@ -4,12 +4,13 @@ namespace App\Filament\Pages\Reports;
 
 use App\Models\Client;
 use App\Models\Project;
-use App\Models\Tag;
 use App\Models\Task;
+use App\Models\TimeEntry;
 use App\Models\WorkPackage;
 use App\Models\Workspace;
 use App\Services\Reports\TimeReportService;
 use App\Support\DurationFormatter;
+use App\Support\TagOptions;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
@@ -67,9 +68,11 @@ class Weekly extends Page
                     ->options(fn () => Client::query()->where('workspace_id', $workspace->id)->pluck('name', 'id'))
                     ->searchable()
                     ->live(),
-                Select::make('tag_id')
+                Select::make('tag')
                     ->label('Tag')
-                    ->options(fn () => Tag::query()->where('workspace_id', $workspace->id)->pluck('name', 'id'))
+                    ->options(fn (): array => TagOptions::from(
+                        TimeEntry::query()->whereHas('project', fn (Builder $query) => $query->where('workspace_id', $workspace->id)),
+                    ))
                     ->searchable()
                     ->live(),
                 Select::make('user_id')

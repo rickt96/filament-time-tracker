@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Invoices;
 use App\Filament\Resources\Invoices\Pages\CreateInvoice;
 use App\Filament\Resources\Invoices\Pages\EditInvoice;
 use App\Filament\Resources\Invoices\Pages\ListInvoices;
+use App\Filament\Resources\Invoices\RelationManagers\TimeEntriesRelationManager;
 use App\Filament\Resources\Invoices\Schemas\InvoiceForm;
 use App\Filament\Resources\Invoices\Tables\InvoicesTable;
 use App\Models\Invoice;
@@ -23,9 +24,9 @@ class InvoiceResource extends Resource
 {
     protected static ?string $model = Invoice::class;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Gestione';
+    protected static string|UnitEnum|null $navigationGroup = 'Fatturazione';
 
-    protected static ?int $navigationSort = 100;
+    protected static ?int $navigationSort = 41;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentCurrencyEuro;
 
@@ -44,7 +45,7 @@ class InvoiceResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            TimeEntriesRelationManager::class,
         ];
     }
 

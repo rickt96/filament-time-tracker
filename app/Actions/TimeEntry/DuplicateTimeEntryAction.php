@@ -25,7 +25,7 @@ class DuplicateTimeEntryAction
             'work_package_id' => $source->work_package_id,
             'description' => $source->description,
             'date' => $date->toDateString(),
-            'tags' => $source->tags->pluck('id')->all(),
+            'tags' => $source->tags,
         ];
 
         if ($startAt) {

@@ -40,4 +40,13 @@ return [
         'api_key' => env('CLOCKIFY_API_KEY'),
     ],
 
+    'notion' => [
+        'base_url' => 'https://api.notion.com/v1',
+        // Pinned on purpose: 2022-06-28 is the last version where a database is
+        // queried via /databases/{id}/query. From 2025-09-03 onwards databases
+        // are split into "data sources" and the endpoint changes shape.
+        'version' => env('NOTION_API_VERSION', '2022-06-28'),
+        'token' => env('NOTION_API_TOKEN'),
+    ],
+
 ];

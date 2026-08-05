@@ -58,7 +58,7 @@ class TimeEntriesTable
             // an Eloquent relation, so Filament's automatic per-column eager
             // loading can't detect it — load it explicitly to avoid an N+1 on
             // every row alongside the other relations shown in this table.
-            ->modifyQueryUsing(fn (Builder $query) => $query->with(['project.client', 'task.workPackage', 'user', 'tags']))
+            ->modifyQueryUsing(fn (Builder $query) => $query->with(['project.client', 'task.workPackage', 'user']))
             ->columns([
                 TextInputColumn::make('description')
                     ->label('')

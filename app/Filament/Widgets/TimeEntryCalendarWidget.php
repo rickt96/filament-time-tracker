@@ -68,6 +68,7 @@ class TimeEntryCalendarWidget extends CalendarWidget
     protected function getEvents(FetchInfo $info): Collection|array|Builder
     {
         return TimeEntry::query()
+            ->with(['project', 'task'])
             ->where('user_id', $this->currentUser()->id)
             ->whereHas('project', fn (Builder $query) => $query->where('workspace_id', Filament::getTenant()?->getKey()))
             ->whereDate('date', '>=', $info->start)
