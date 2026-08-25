@@ -7,16 +7,19 @@ use App\Enums\ProjectStatus;
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
 use App\Enums\WorkPackageStatus;
+use App\Filament\Forms\Components\RichEditor\TaskMentionProvider;
+use App\Filament\Resources\Tasks\Schemas\TaskForm;
 use App\Filament\Resources\Tasks\TaskResource;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\WorkPackage;
 use App\Models\Workspace;
-use App\Services\Sync\ClickUpTaskImportService;
+use App\Services\Sync\Drivers\ClickUpDriver;
 use App\Services\Sync\Exceptions\ClickUpImportException;
 use App\Support\TagOptions;
 use BackedEnum;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\RichEditor;
@@ -328,6 +331,10 @@ class TasksKanbanBoard extends KanbanBoard
             RichEditor::make('description')
                 ->label('Descrizione')
                 ->hiddenLabel()
+                ->fileAttachmentsDirectory('tasks')
+                ->mentions([
+                    TaskMentionProvider::make(),
+                ])
                 ->columnSpanFull(),
         ];
     }
@@ -471,21 +478,33 @@ class TasksKanbanBoard extends KanbanBoard
      | ----------------------------------------------------------------- */
 
     /**
-     * @return array<int, Action>
+     * @return array<int, Action|ActionGroup>
      */
     protected function getHeaderActions(): array
     {
         return [
-            $this->importTaskAction(),
             Action::make('createTask')
                 ->label('Nuovo task')
                 ->icon(Heroicon::OutlinedPlus)
-                ->url(TaskResource::getUrl('create')),
-            Action::make('tableView')
-                ->label('Vista tabella')
-                ->icon(Heroicon::OutlinedTableCells)
-                ->color('gray')
-                ->url(TaskResource::getUrl('index')),
+                ->modalWidth('4xl')
+                ->schema(TaskForm::components())
+                ->action(function (array $data): void {
+                    Task::create($data);
+
+                    Notification::make()
+                        ->success()
+                        ->title('Task creato')
+                        ->send();
+                }),
+
+            ActionGroup::make([
+                $this->importTaskAction(),
+                Action::make('tableView')
+                    ->label('Tabella')
+                    ->icon(Heroicon::OutlinedTableCells)
+                    ->color('gray')
+                    ->url(TaskResource::getUrl('index')),
+            ]),
         ];
     }
 
@@ -521,7 +540,7 @@ class TasksKanbanBoard extends KanbanBoard
                 $project = Project::findOrFail((int) $data['project_id']);
 
                 try {
-                    $task = app(ClickUpTaskImportService::class)->import($project, $data['external_task_id']);
+                    $task = app(ClickUpDriver::class)->importTask($project, $data['external_task_id']);
                 } catch (ClickUpImportException $exception) {
                     Notification::make()
                         ->danger()
@@ -539,10 +558,10 @@ class TasksKanbanBoard extends KanbanBoard
                     ->actions([
                         Action::make('delete')
                             ->label('Annulla')
-                            ->action(fn() => $task->delete()),
+                            ->action(fn () => $task->delete()),
                         Action::make('edit')
                             ->label('Modifica')
-                            ->url(TaskResource::getUrl('edit', ['record' => $task]))
+                            ->url(TaskResource::getUrl('edit', ['record' => $task])),
                     ])
                     ->send();
             });

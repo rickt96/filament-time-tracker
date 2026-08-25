@@ -6,6 +6,7 @@ use App\Enums\ClientSyncDriver;
 use App\Models\Client;
 use App\Services\Sync\Contracts\SyncDriverInterface;
 use App\Services\Sync\Drivers\ClickUpDriver;
+use App\Services\Sync\Drivers\H2BitDriver;
 use App\Services\Sync\Drivers\JiraDriver;
 use App\Services\Sync\Drivers\NullDriver;
 
@@ -22,6 +23,7 @@ class SyncDriverManager
         return match ($client->sync_driver) {
             ClientSyncDriver::ClickUp => new ClickUpDriver,
             ClientSyncDriver::Jira => new JiraDriver,
+            ClientSyncDriver::H2Bit => new H2BitDriver,
             null => new NullDriver,
         };
     }

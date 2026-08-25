@@ -1,5 +1,28 @@
 @import '../../../../vendor/filament/filament/resources/css/theme.css';
 
+/*
+ * guava/calendar renders through its own `.ec-*` classes (the Event
+ * Calendar JS library it wraps), so without this @source Tailwind's JIT
+ * scanner never sees them and the calendar body falls back to unstyled
+ * markup — this is what breaks dark mode on the day/time grid. The
+ * @import brings in guava's own dark-mode CSS variable overrides so the
+ * grid matches the rest of the Filament theme.
+ */
+@source '../../../../vendor/guava/calendar/resources/**/*';
+@import '../../../../vendor/guava/calendar/resources/css/theme.css';
+
+/*
+ * guava's theme.css above overrides most --ec-* variables for dark mode but
+ * misses --ec-bg-color (the base @event-calendar library's variable for the
+ * container/day-cell background, default #fff — see
+ * https://cdn.jsdelivr.net/npm/@event-calendar/build@5.5.1/dist/event-calendar.min.css),
+ * which is why the grid stayed white outside the "today" column. Filling
+ * the gap here rather than patching the vendor file.
+ */
+.dark .ec {
+    --ec-bg-color: var(--gray-900);
+}
+
 @source '../../../../app/Filament/**/*';
 @source '../../../../resources/views/filament/**/*';
 

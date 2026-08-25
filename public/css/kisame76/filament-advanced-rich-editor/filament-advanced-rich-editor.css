@@ -1,0 +1,2091 @@
+/*
+ * filament-advanced-rich-editor
+ *
+ * Standalone stylesheet, registered through FilamentAsset::register(). It is served as
+ * its own file and is NEVER piped through the consuming app's Tailwind build, so it must
+ * stay plain CSS — no @apply, no @variant, no Tailwind utilities.
+ *
+ * Colours are expressed with the custom properties Filament registers at runtime
+ * (--gray-*, --primary-*, --color-white, --prose-*), each with a literal fallback, so the
+ * package follows the panel's own colour registration instead of hard-coding a palette.
+ *
+ * Dark mode uses `:where(.dark, .dark *)` — the exact selector Tailwind v4 compiles
+ * Filament's `dark:` variant to (verified against the panel's published app.css). Because
+ * :where() contributes zero specificity, each dark rule carries the same weight as the
+ * light rule above it and wins purely on source order, matching upstream's behaviour.
+ *
+ * Custom properties a consumer may override:
+ *   --fi-arte-sticky-offset  distance from the viewport top the pinned toolbar rests at
+ *   --fi-arte-sticky-bg      opaque background painted behind the pinned toolbar
+ *   --fi-arte-divider-color  colour of the vertical toolbar rule
+ *   --fi-arte-toolbar-radius top corner radius of the pinned toolbar
+ */
+
+/* -------------------------------------------------------------------------- */
+/* Toolbar divider                                                            */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * A rule spanning the toolbar's full height would run into the 0.5rem block padding
+ * around the 2rem button row, so it is deliberately shorter than the buttons and centred
+ * against them. `align-self` rather than a fixed margin keeps that alignment when the
+ * toolbar wraps onto a second row.
+ *
+ * RichEditor::getToolbarButtons() groups consecutive non-array items, so a top-level
+ * 'divider' token arrives wrapped in its own .fi-fo-rich-editor-toolbar-group. Styling
+ * the divider element itself rather than that wrapper means the same rule also covers a
+ * divider placed inside a group.
+ */
+.fi-arte-toolbar-divider {
+    flex: 0 0 auto;
+    align-self: center;
+    width: 1px;
+    height: 1.5rem;
+    background-color: var(--fi-arte-divider-color, var(--gray-200, #e4e4e7));
+}
+
+.fi-arte-toolbar-divider:where(.dark, .dark *) {
+    background-color: var(
+        --fi-arte-divider-color,
+        color-mix(in oklab, var(--color-white, #fff) 10%, transparent)
+    );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Sticky toolbar                                                             */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Upstream sets `position: relative` on the toolbar; replacing it with `sticky` preserves
+ * the containing block the dropdown menus are anchored to.
+ *
+ * The background has to be opaque, otherwise editor content scrolls visibly through the
+ * pinned bar. Filament's input wrapper is plain white in light mode; in dark mode it is
+ * two stacked white/5 overlays (section content container + input wrapper) on top of
+ * gray-900, and the color-mix below is the flattened equivalent of those two overlays.
+ *
+ * The bottom border is restated because a pinned bar has nothing but that border
+ * separating it from the content sliding underneath.
+ *
+ * z-index 10 is the value Filament already uses for its own sticky custom-block headers,
+ * so the two never fight when both are pinned.
+ */
+.fi-fo-rich-editor-toolbar.fi-arte-sticky {
+    position: sticky;
+    top: var(--fi-arte-sticky-offset, 4rem);
+    z-index: 10;
+    background-color: var(--fi-arte-sticky-bg, var(--color-white, #fff));
+    border-bottom-style: solid;
+    border-bottom-width: 1px;
+    border-bottom-color: var(--gray-200, #e4e4e7);
+    /*
+     * The input wrapper rounds its corners but does not clip its children, so an opaque
+     * bar would paint square corners over the rounded ones. `inherit` is no help here -
+     * the toolbar's parent is the editor's plain wire:ignore container - so the radius is
+     * restated. It matches Filament's `rounded-lg` and can be retuned by a theme through
+     * the custom property.
+     */
+    border-start-start-radius: var(--fi-arte-toolbar-radius, 0.5rem);
+    border-start-end-radius: var(--fi-arte-toolbar-radius, 0.5rem);
+}
+
+.fi-fo-rich-editor-toolbar.fi-arte-sticky:where(.dark, .dark *) {
+    background-color: var(
+        --fi-arte-sticky-bg,
+        color-mix(in oklab, var(--color-white, #fff) 10%, var(--gray-900, #18181b))
+    );
+    border-bottom-color: color-mix(in oklab, var(--color-white, #fff) 10%, transparent);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Task lists                                                                 */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * These two classes live in the stored rich content, not only in the editor, so they are
+ * deliberately NOT scoped under .fi-arte — the same markup has to render correctly in
+ * text entries, tables and front-end output produced by RichContentRenderer.
+ *
+ * .fi-prose reaches lists through `ul:where(:not(.fi-not-prose, …))` selectors, which
+ * carry element-level specificity only. A single class here therefore outranks the disc
+ * marker and the list indentation without needing !important.
+ */
+.fi-arte-task-list {
+    margin-inline-start: 0;
+    padding-inline-start: 0;
+    list-style: none;
+}
+
+.fi-arte-task-item {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding-inline-start: 0;
+    list-style: none;
+}
+
+/* WebKit still paints a marker on a `display: flex` list item unless it is emptied. */
+.fi-arte-task-item::marker {
+    content: '';
+}
+
+/* Tighter than prose's 1rem sibling rhythm: a checklist should read as a single block. */
+.fi-arte-task-item + .fi-arte-task-item {
+    margin-top: 0.25rem;
+}
+
+/*
+ * The checkbox is centred inside a box exactly one prose line tall so that it lands on
+ * the item's FIRST line. Centring it against the whole item would drift downwards on
+ * multi-line entries and break the checklist's left column.
+ */
+.fi-arte-task-item > label {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    /*
+     * As tall as the item's first line, so the control ends up on its optical centre.
+     * The editor's node view measures that line and writes --fi-arte-task-line, which is
+     * the only way to follow an inline font size applied to the text. Outside the editor
+     * the fallbacks apply: the real line box where `lh` is supported, otherwise a size
+     * relative to the font.
+     */
+    height: var(--fi-arte-task-line, 1.5em);
+    /* Half the line's leading, so the control centres on the text rather than the box. */
+    margin: var(--fi-arte-task-line-offset, 0px) 0 0 0;
+    cursor: pointer;
+    user-select: none;
+}
+
+@supports (height: 1lh) {
+    .fi-arte-task-item > label {
+        height: var(--fi-arte-task-line, 1lh);
+    }
+}
+
+.fi-arte-task-item > label > input[type='checkbox'] {
+    width: 1rem;
+    height: 1rem;
+    margin: 0;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    accent-color: var(--primary-600, #2563eb);
+}
+
+.fi-arte-task-item > label > input[type='checkbox']:where(.dark, .dark *) {
+    accent-color: var(--primary-500, #3b82f6);
+}
+
+/*
+ * TipTap emits a sibling span next to the input as a hook for a custom check mark. It is
+ * unused here, and an empty inline box would still consume the flex gap — but only hide
+ * it while it really is empty, so a future custom mark keeps working.
+ */
+.fi-arte-task-item > label > span:empty:not(.fi-arte-task-item-box) {
+    display: none;
+}
+
+/*
+ * `min-width: 0` lets long unbroken words wrap instead of widening the flex row.
+ *
+ * The margin reset matters as much: Filament's prose styles give block children a top
+ * margin, which would push the text a full paragraph gap below the checkbox that is
+ * supposed to sit on its first line.
+ */
+.fi-arte-task-item > div {
+    flex: 1 1 0;
+    min-width: 0;
+    margin-block: 0;
+}
+
+.fi-arte-task-item > div > :first-child {
+    margin-top: 0;
+}
+
+.fi-arte-task-item > div > :last-child {
+    margin-bottom: 0;
+}
+
+/*
+ * A sub-list nests inside the item's content div, which the checkbox column has already
+ * offset, so it needs no further indent. When TipTap instead emits the sub-list as a
+ * direct child of the item, `flex-basis: 100%` drops it onto its own row and the padding
+ * restores that same one-column step by hand.
+ */
+.fi-arte-task-list .fi-arte-task-list {
+    margin-block: 0.25rem;
+    padding-inline-start: 0;
+}
+
+.fi-arte-task-item > .fi-arte-task-list {
+    flex: 1 0 100%;
+    padding-inline-start: 1.5rem;
+}
+
+/* Completed items read as muted; the checkbox itself stays at full contrast. */
+.fi-arte-task-item[data-checked='true'] > div {
+    color: var(--gray-400, #a1a1aa);
+}
+
+.fi-arte-task-item[data-checked='true'] > div:where(.dark, .dark *) {
+    color: var(--gray-500, #71717a);
+}
+
+/*
+ * Struck through on the item's own paragraphs only. Text decoration propagates into
+ * in-flow block descendants and cannot be cancelled further down the tree, so setting it
+ * on the content wrapper would permanently strike out every nested sub-item too.
+ */
+.fi-arte-task-item[data-checked='true'] > div > p {
+    text-decoration-line: line-through;
+}
+
+/* Colour is inherited, so a checked parent would otherwise mute its unchecked children. */
+.fi-arte-task-item[data-checked='true'] .fi-arte-task-list {
+    color: var(--prose-color, var(--gray-700, #3f3f46));
+}
+
+.fi-arte-task-item[data-checked='true'] .fi-arte-task-list:where(.dark, .dark *) {
+    color: var(--prose-color, var(--gray-300, #d4d4d8));
+}
+
+/*
+ * The box outside the editor.
+ *
+ * Filament sanitises rich content before it reaches a page, and its allow list drops
+ * `<input>` and `data-checked` - so saved content carries neither the checkbox the editor
+ * renders nor the attribute the rules above key on. `TaskItem::renderHTML()` therefore
+ * emits an empty span and puts the state on a class, and this is the half that draws it.
+ */
+.fi-arte-task-item-box {
+    display: inline-block;
+    inline-size: 1rem;
+    block-size: 1rem;
+    position: relative;
+    flex: 0 0 auto;
+    border: 1px solid var(--gray-400, #a1a1aa);
+    border-radius: 0.25rem;
+    background-color: transparent;
+}
+
+.fi-arte-task-item-box:where(.dark, .dark *) {
+    border-color: var(--gray-500, #71717a);
+}
+
+.fi-arte-task-item-checked > .fi-arte-task-item-control > .fi-arte-task-item-box {
+    border-color: var(--primary-600, #2563eb);
+    background-color: var(--primary-600, #2563eb);
+}
+
+.fi-arte-task-item-checked > .fi-arte-task-item-control > .fi-arte-task-item-box:where(.dark, .dark *) {
+    border-color: var(--primary-500, #3b82f6);
+    background-color: var(--primary-500, #3b82f6);
+}
+
+/* The tick, drawn as two borders rather than shipped as an asset. */
+.fi-arte-task-item-checked > .fi-arte-task-item-control > .fi-arte-task-item-box::after {
+    content: '';
+    position: absolute;
+    inset-block-start: 0.0625rem;
+    inset-inline-start: 0.3125rem;
+    inline-size: 0.25rem;
+    block-size: 0.5rem;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+/*
+ * The same muting the editor gives a ticked item, keyed on the class that survives the
+ * sanitiser instead of on the attribute that does not.
+ */
+.fi-arte-task-item-checked > .fi-arte-task-item-content {
+    color: var(--gray-400, #a1a1aa);
+}
+
+.fi-arte-task-item-checked > .fi-arte-task-item-content:where(.dark, .dark *) {
+    color: var(--gray-500, #71717a);
+}
+
+.fi-arte-task-item-checked > .fi-arte-task-item-content > p {
+    text-decoration-line: line-through;
+}
+
+.fi-arte-task-item-checked .fi-arte-task-list {
+    color: var(--prose-color, var(--gray-700, #3f3f46));
+}
+
+.fi-arte-task-item-checked .fi-arte-task-list:where(.dark, .dark *) {
+    color: var(--prose-color, var(--gray-300, #d4d4d8));
+}
+
+/* -------------------------------------------------------------------------- */
+/* Textual toolbar dropdowns                                                  */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Scoped to .fi-arte so a plain Filament RichEditor on the same page stays untouched.
+ * Filament already lays the textual menu out (column direction, min-width, small type);
+ * the one gap is icon sizing, because generate_icon_html() emits 1.25rem icons that tower
+ * over the 0.8125rem option labels beside them.
+ */
+.fi-arte
+    .fi-fo-rich-editor-dropdown-tool-textual
+    .fi-fo-rich-editor-dropdown-tool-option
+    svg {
+    flex: 0 0 auto;
+    width: 1rem;
+    height: 1rem;
+}
+
+/*
+ * The headings dropdown can list six levels. Capping the menu keeps it inside the
+ * viewport when the toolbar is pinned near the bottom of a tall form.
+ */
+.fi-arte
+    .fi-fo-rich-editor-dropdown-tool-textual
+    .fi-fo-rich-editor-dropdown-tool-menu {
+    max-height: 18rem;
+    overflow-y: auto;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Toolbar alignment                                                          */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Filament's toolbar is a wrapping flex row, so the groups are positioned with
+ * `justify-content`. Only the horizontal axis is touched; spacing, wrapping and the
+ * bottom border stay upstream's.
+ */
+.fi-fo-rich-editor-toolbar.fi-arte-toolbar-align-start,
+.fi-arte-toolbar-align-start > .fi-arte-toolbar-flow {
+    justify-content: flex-start;
+}
+
+.fi-fo-rich-editor-toolbar.fi-arte-toolbar-align-center,
+.fi-arte-toolbar-align-center > .fi-arte-toolbar-flow {
+    justify-content: center;
+}
+
+.fi-fo-rich-editor-toolbar.fi-arte-toolbar-align-end,
+.fi-arte-toolbar-align-end > .fi-arte-toolbar-flow {
+    justify-content: flex-end;
+}
+
+.fi-fo-rich-editor-toolbar.fi-arte-toolbar-align-between,
+.fi-arte-toolbar-align-between > .fi-arte-toolbar-flow {
+    justify-content: space-between;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Pinned toolbar buttons                                                     */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * A toolbar carrying a 'pin' marker is rendered as two containers rather than a row of
+ * groups: the ones that travel with the alignment, and the ones that keep an edge. Grid
+ * rather than flexbox, because an auto margin would eat the free space the alignment
+ * needs - the flow would stop being centred the moment anything was pinned.
+ *
+ * The columns are declared for the pinned side, and the halves are placed into them by
+ * number, so the DOM order stays the reading order whichever edge is asked for.
+ */
+.fi-fo-rich-editor-toolbar.fi-arte-toolbar-split {
+    display: grid;
+    align-items: center;
+    grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.fi-arte-toolbar-split.fi-arte-toolbar-pin-start {
+    grid-template-columns: auto minmax(0, 1fr);
+}
+
+/*
+ * The pinned half is a corner of the bar, not a row that reflows: a handful of buttons
+ * that belong together and are looked for in one place. Keeping it on one line is also
+ * what gives its column a minimum to hold on to - a wrapping half would report the width
+ * of its widest button as its minimum and let the flow overrun it.
+ */
+.fi-arte-toolbar-pinned {
+    flex-wrap: nowrap;
+    /*
+     * A corner, so it stays in the corner: when the flow wraps onto a second and third
+     * row the pinned half keeps the first one instead of floating in the middle of the
+     * bar. On a toolbar that fits in one row this changes nothing.
+     */
+    align-self: start;
+}
+
+.fi-arte-toolbar-split.fi-arte-toolbar-pin-end > .fi-arte-toolbar-flow,
+.fi-arte-toolbar-split.fi-arte-toolbar-pin-start > .fi-arte-toolbar-pinned {
+    grid-column: 1;
+}
+
+.fi-arte-toolbar-split.fi-arte-toolbar-pin-end > .fi-arte-toolbar-pinned,
+.fi-arte-toolbar-split.fi-arte-toolbar-pin-start > .fi-arte-toolbar-flow {
+    grid-column: 2;
+}
+
+/*
+ * A centred bar gets a third column, empty and the same width as the one the pinned half
+ * sits in. Without it the flow would be centred on what is left of the bar rather than on
+ * the bar, and the whole toolbar would look nudged away from the pinned corner.
+ *
+ * The empty column can collapse to nothing and the flow column can wrap its own contents,
+ * so a narrow bar loses the symmetry before it loses any button.
+ */
+.fi-arte-toolbar-split.fi-arte-toolbar-align-center {
+    grid-template-columns: minmax(0, 1fr) auto 1fr;
+}
+
+.fi-arte-toolbar-split.fi-arte-toolbar-align-center.fi-arte-toolbar-pin-start {
+    grid-template-columns: 1fr auto minmax(0, 1fr);
+}
+
+.fi-arte-toolbar-split.fi-arte-toolbar-align-center > .fi-arte-toolbar-flow {
+    grid-column: 2;
+}
+
+.fi-arte-toolbar-split.fi-arte-toolbar-align-center.fi-arte-toolbar-pin-end
+    > .fi-arte-toolbar-pinned {
+    grid-column: 3;
+}
+
+.fi-arte-toolbar-split.fi-arte-toolbar-align-center.fi-arte-toolbar-pin-start
+    > .fi-arte-toolbar-pinned {
+    grid-column: 1;
+}
+
+.fi-arte-toolbar-split > .fi-arte-toolbar-pinned {
+    justify-self: end;
+}
+
+.fi-arte-toolbar-split.fi-arte-toolbar-pin-start > .fi-arte-toolbar-pinned {
+    justify-self: start;
+}
+
+/*
+ * Both halves repeat the bar's own row: Filament styles `.fi-fo-rich-editor-toolbar` as
+ * the flex container the groups sit in, and that container is now one level further out.
+ */
+.fi-arte-toolbar-flow,
+.fi-arte-toolbar-pinned {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: 0.75rem;
+    row-gap: 0.25rem;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Font size                                                                  */
+/* -------------------------------------------------------------------------- */
+
+/* One control, two parts: a number to type in and a chevron to open the list with. */
+.fi-arte-font-size-control {
+    display: flex;
+    align-items: center;
+    gap: 0.125rem;
+    padding-inline: 0.5rem;
+    cursor: text;
+}
+
+.fi-arte-font-size-value {
+    inline-size: 2.5rem;
+    border: 0;
+    background-color: transparent;
+    font-size: 0.8125rem;
+    font-weight: 400;
+    line-height: 1.25rem;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+    color: inherit;
+}
+
+.fi-arte-font-size-value:focus {
+    outline: none;
+}
+
+/* Padded to a size a finger can find, without growing the control around it. */
+.fi-arte-font-size-toggle {
+    display: flex;
+    align-items: center;
+    align-self: stretch;
+    padding-inline-start: 0.25rem;
+    cursor: pointer;
+}
+
+.fi-arte-font-size-menu {
+    flex-direction: column;
+    min-inline-size: 6rem;
+    max-block-size: 18rem;
+    overflow-y: auto;
+}
+
+.fi-arte-font-size-menu .fi-fo-rich-editor-dropdown-tool-option {
+    font-variant-numeric: tabular-nums;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Font picker                                                                */
+/* -------------------------------------------------------------------------- */
+
+.fi-arte-font-picker-trigger {
+    gap: 0.25rem;
+    padding-inline: 0.5rem;
+}
+
+/* The name is set in the typeface it names, so the trigger is its own preview. */
+.fi-arte-font-picker-label {
+    max-inline-size: 7rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.8125rem;
+    font-weight: 400;
+    line-height: 1.25rem;
+}
+
+.fi-arte-font-menu {
+    flex-direction: column;
+    min-inline-size: 11rem;
+    max-block-size: 18rem;
+    overflow-y: auto;
+}
+
+.fi-arte-font-search {
+    inline-size: 100%;
+    margin-block-end: 0.375rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    border: 1px solid var(--gray-300, #d4d4d8);
+    background-color: transparent;
+    font-family: inherit;
+    font-size: 0.8125rem;
+    line-height: 1.25rem;
+    color: inherit;
+}
+
+.fi-arte-font-search:where(.dark, .dark *) {
+    border-color: var(--gray-600, #52525b);
+}
+
+.fi-arte-font-search:focus {
+    outline: 2px solid var(--primary-600, #2563eb);
+    outline-offset: -1px;
+}
+
+.fi-arte-font-option {
+    inline-size: 100%;
+    font-size: 0.9375rem;
+}
+
+/* The typeface the theme sets, named beside the option that hands the text back to it. */
+.fi-arte-font-default {
+    font-family: inherit;
+    font-size: 0.75rem;
+    color: var(--gray-400, #a1a1aa);
+}
+
+/* The way back to the theme's own size, named the same way and set apart the same way. */
+.fi-arte-font-size-default {
+    font-size: 0.75rem;
+    color: var(--gray-400, #a1a1aa);
+}
+
+/*
+ * The one button in the image toolbar that takes the image away. It is the only
+ * destructive thing in there, so it is the only thing that is not grey.
+ */
+.fi-arte-image-delete:hover,
+.fi-arte-image-delete:focus-visible {
+    color: var(--danger-600, #dc2626);
+}
+
+.fi-arte-image-delete:hover:where(.dark, .dark *),
+.fi-arte-image-delete:focus-visible:where(.dark, .dark *) {
+    color: var(--danger-400, #f87171);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Fullscreen                                                                 */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * The overlay the fullscreen button switches on. It is a fixed box rather than the
+ * browser's own Fullscreen API - that promotes one element into the top layer, where
+ * Filament's modals, rendered at the end of the body, could no longer be seen.
+ *
+ * z-index 35 puts it over the panel's topbar and sidebar (30) and under Filament's
+ * modals and their overlay (40), which is the whole point of not using the real thing.
+ *
+ * The background has to be restated: Filament's input wrapper is plain white in light
+ * mode but a translucent white/5 in dark mode, and the page would show through a
+ * translucent overlay. The colour is the same flattened value the sticky toolbar uses.
+ */
+.fi-fo-rich-editor.fi-arte-fullscreen {
+    position: fixed;
+    inset: 0;
+    z-index: 35;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    border-radius: 0;
+    background-color: var(--fi-arte-fullscreen-bg, var(--color-white, #fff));
+}
+
+.fi-fo-rich-editor.fi-arte-fullscreen:where(.dark, .dark *) {
+    background-color: var(
+        --fi-arte-fullscreen-bg,
+        color-mix(in oklab, var(--color-white, #fff) 10%, var(--gray-900, #18181b))
+    );
+}
+
+/*
+ * The two containers between the wrapper and the editor: Filament's own content column
+ * and the plain `wire:ignore` div the Alpine component lives on. Both have to carry the
+ * height down, or the writing area would still be as tall as its text.
+ *
+ * `min-height: 0` on each of them is what makes the content scroll instead of pushing
+ * the bottom of the editor past the bottom of the window: a flex child's automatic
+ * minimum size is its content, and that overrides the height the parent hands it.
+ */
+.fi-arte-fullscreen > .fi-input-wrp-content-ctn,
+.fi-arte-fullscreen > .fi-input-wrp-content-ctn > * {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Capped height                                                              */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * A field with `maxHeight()` scrolls inside itself rather than pushing the rest of the
+ * form down the page. Only the content box is capped, so the toolbar stays above the text
+ * without being pinned to anything - which is why the field turns the sticky toolbar off
+ * for itself when a height is set.
+ */
+.fi-fo-rich-editor.fi-arte-max-height .fi-fo-rich-editor-content {
+    max-height: var(--fi-arte-max-height);
+    overflow-y: auto;
+}
+
+/*
+ * Fullscreen is a height of its own and wins: the overlay already fills the window, and a
+ * 400px box inside it would leave most of the screen empty.
+ */
+.fi-arte-fullscreen.fi-arte-max-height .fi-fo-rich-editor-content {
+    max-height: none;
+}
+
+/*
+ * The direction is deliberately left alone: Filament reverses this column so the panels
+ * sit above the text, and turns it into a row from `2xl` up. Only the height is ours.
+ */
+.fi-arte-fullscreen .fi-fo-rich-editor-main {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.fi-arte-fullscreen .fi-fo-rich-editor-content {
+    min-height: 0;
+    overflow-y: auto;
+}
+
+/*
+ * Nothing left to be sticky against, and nothing left to round: the toolbar is the top
+ * edge of the overlay, and the topbar its offset was measured from is behind it.
+ */
+.fi-arte-fullscreen .fi-fo-rich-editor-toolbar.fi-arte-sticky {
+    top: 0;
+    border-start-start-radius: 0;
+    border-start-end-radius: 0;
+}
+
+/* The page behind the overlay must not scroll away under it. */
+body.fi-arte-fullscreen-lock {
+    overflow: hidden;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Shortcut list                                                              */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Two columns wherever the dialog is wide enough for them. The list is around two dozen
+ * entries long, and in one column it is taller than most windows - which turns a
+ * reference you glance at into one you scroll through.
+ *
+ * Pairs flow across and then down, so the reading order is the order the rows were built
+ * in whichever number of columns they end up in.
+ */
+.fi-arte-shortcuts-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    column-gap: 2.5rem;
+    margin: 0;
+}
+
+@media (min-width: 48rem) {
+    .fi-arte-shortcuts-list {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+/*
+ * One entry: the name on the reading edge, the keys on the far one, and a hairline under
+ * both. The rule is what carries the eye across the gap between them - the pair is only
+ * legible as a pair while it is clear which keys belong to which name.
+ */
+.fi-arte-shortcut {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-block: 0.4375rem;
+    border-block-end: 1px solid var(--gray-100, #f4f4f5);
+}
+
+.fi-arte-shortcut:where(.dark, .dark *) {
+    border-block-end-color: color-mix(in oklab, var(--color-white, #fff) 8%, transparent);
+}
+
+.fi-arte-shortcut-label {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 400;
+    line-height: 1.25rem;
+    color: var(--gray-700, #3f3f46);
+}
+
+.fi-arte-shortcut-label:where(.dark, .dark *) {
+    color: var(--gray-300, #d4d4d8);
+}
+
+.fi-arte-shortcut-keys {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin: 0;
+    flex: 0 0 auto;
+}
+
+/*
+ * Keycaps. The glyphs are written in by Alpine once it knows which machine is reading, so
+ * a cap has to hold both `⌘` and `Shift` without the row jumping: hence a minimum width
+ * rather than a fixed one, and tabular figures so the digits line up down the column.
+ */
+.fi-arte-shortcuts kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: 1.5rem;
+    padding-block: 0.0625rem;
+    padding-inline: 0.375rem;
+    border: 1px solid var(--gray-200, #e4e4e7);
+    border-block-end-width: 2px;
+    border-radius: 0.375rem;
+    background-color: var(--gray-50, #fafafa);
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.125rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--gray-600, #52525b);
+}
+
+.fi-arte-shortcuts kbd:where(.dark, .dark *) {
+    border-color: color-mix(in oklab, var(--color-white, #fff) 15%, transparent);
+    background-color: color-mix(in oklab, var(--color-white, #fff) 7%, transparent);
+    color: var(--gray-200, #e4e4e7);
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* Image resizing                                                             */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * The size readout that follows a drag. Appended to the resize wrapper by the assist
+ * extension and removed again when the drag ends, so it only exists while it is useful.
+ */
+.fi-arte-image-size {
+    position: absolute;
+    inset-block-end: 0.5rem;
+    inset-inline-end: 0.5rem;
+    z-index: 10;
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.375rem;
+    background-color: rgba(9, 9, 11, 0.75);
+    color: #fff;
+    font-size: 0.6875rem;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.25rem;
+    white-space: nowrap;
+    /* Never in the way of the handle being dragged. */
+    pointer-events: none;
+}
+
+/*
+ * A quarter turned image is given compensating margins so its layout box matches what is
+ * drawn, which makes that box NARROWER than the image itself. `max-width: 100%` then reads
+ * the shrunken box as the limit and squashes the picture - a landscape image turned on its
+ * side would lose everything past its own height. The margins already account for the real
+ * footprint, so the limit is dropped for exactly these images.
+ */
+.fi-arte [data-resize-wrapper] > img[style*='rotate('] {
+    max-width: none;
+}
+
+/* The unlocked state is the notable one, so it is the one that gets the accent. */
+.fi-arte-image-lock.fi-active {
+    color: var(--primary-600, #2563eb);
+}
+
+.fi-arte-image-lock.fi-active:where(.dark, .dark *) {
+    color: var(--primary-400, #60a5fa);
+}
+
+/*
+ * An image whose file did not load. Without this the node keeps its size and renders as
+ * an empty hole, which reads like a bug in the editor rather than a missing file.
+ */
+.fi-arte [data-resize-wrapper][data-arte-image='error'] {
+    border: 1px dashed rgba(9, 9, 11, 0.35);
+    border-radius: 0.5rem;
+    background-color: rgba(9, 9, 11, 0.06);
+}
+
+.fi-arte [data-resize-wrapper][data-arte-image='error']:where(.dark, .dark *) {
+    border-color: rgba(255, 255, 255, 0.35);
+    background-color: rgba(255, 255, 255, 0.06);
+}
+
+.fi-arte [data-resize-wrapper][data-arte-image='error']::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    /* A crossed-out picture frame, drawn rather than shipped as an asset. */
+    background-color: currentColor;
+    opacity: 0.55;
+    inline-size: 2rem;
+    block-size: 2rem;
+    -webkit-mask-image: var(--fi-arte-image-error-icon);
+    mask-image: var(--fi-arte-image-error-icon);
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+}
+
+.fi-arte {
+    --fi-arte-image-error-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='black' stroke-width='1.5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z'/%3E%3Cpath stroke-linecap='round' d='M3 21L21 3'/%3E%3C/svg%3E");
+}
+
+/* -------------------------------------------------------------------------- */
+/* Colour pickers                                                             */
+/* -------------------------------------------------------------------------- */
+
+/* The trigger carries the icon with a bar of the current colour under it. */
+.fi-arte-color-preview {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.125rem;
+}
+
+.fi-arte-color-preview-bar {
+    inline-size: 1rem;
+    block-size: 0.25rem;
+    border-radius: 0.125rem;
+    background-color: currentColor;
+}
+
+/* Nothing set yet: a muted rail rather than an accidental black bar. */
+.fi-arte-color-preview-bar-empty {
+    background-color: var(--gray-300, #d4d4d8);
+}
+
+.fi-arte-color-preview-bar-empty:where(.dark, .dark *) {
+    background-color: var(--gray-600, #52525b);
+}
+
+.fi-arte-color-menu {
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.5rem;
+}
+
+.fi-arte-color-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1.5rem);
+    gap: 0.25rem;
+}
+
+.fi-arte-color-swatch {
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+    border-radius: 0.375rem;
+    border: 1px solid rgba(9, 9, 11, 0.1);
+    background-color: var(--fi-arte-color, transparent);
+    cursor: pointer;
+}
+
+.fi-arte-color-swatch:where(.dark, .dark *) {
+    border-color: rgba(255, 255, 255, 0.15);
+    background-color: var(--fi-arte-dark-color, var(--fi-arte-color, transparent));
+}
+
+.fi-arte-color-swatch:hover {
+    transform: scale(1.08);
+}
+
+/* The active swatch is ringed rather than recoloured, so its colour stays readable. */
+.fi-arte-color-swatch.fi-active {
+    outline: 2px solid var(--primary-600, #2563eb);
+    outline-offset: 1px;
+}
+
+.fi-arte-color-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--fi-arte-divider-color, rgba(9, 9, 11, 0.1));
+}
+
+.fi-arte-color-actions:where(.dark, .dark *) {
+    border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+.fi-arte-color-clear {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.375rem;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.fi-arte-color-clear:hover {
+    background-color: rgba(9, 9, 11, 0.05);
+}
+
+.fi-arte-color-clear:hover:where(.dark, .dark *) {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* The "no colour" swatch: a slash, the way a colour picker usually spells empty. */
+.fi-arte-color-clear-swatch {
+    position: relative;
+    inline-size: 1rem;
+    block-size: 1rem;
+    border-radius: 0.25rem;
+    border: 1px solid rgba(9, 9, 11, 0.2);
+    overflow: hidden;
+}
+
+.fi-arte-color-clear-swatch:where(.dark, .dark *) {
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+.fi-arte-color-clear-swatch::after {
+    content: '';
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: -20%;
+    inline-size: 140%;
+    block-size: 1px;
+    background-color: var(--danger-500, #ef4444);
+    transform: rotate(-45deg);
+}
+
+/* The native picker is the input itself; only its trigger is styled. */
+.fi-arte-color-custom {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 1.75rem;
+    block-size: 1.75rem;
+    border-radius: 0.375rem;
+    cursor: pointer;
+}
+
+.fi-arte-color-custom:hover {
+    background-color: rgba(9, 9, 11, 0.05);
+}
+
+.fi-arte-color-custom:hover:where(.dark, .dark *) {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.fi-arte-color-custom-input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    cursor: pointer;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Emoji picker                                                               */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * The popup lives on the body, not inside the field: the button that opens it usually sits
+ * in a dropdown that closes itself on that very click, and a panel nested in a closing
+ * menu closes with it. Being a child of the body also keeps it clear of the editor's own
+ * overflow. The z-index sits above the fullscreen overlay (30) and below Filament's modal
+ * layer (40), which is the same lane the rest of this package's chrome uses.
+ */
+.fi-arte-emoji-popup {
+    position: fixed;
+    z-index: 35;
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    padding: 0.5rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--gray-300, #d4d4d8);
+    background-color: var(--color-white, #fff);
+    box-shadow: 0 10px 25px rgba(9, 9, 11, 0.15);
+}
+
+.fi-arte-emoji-popup:where(.dark, .dark *) {
+    border-color: var(--gray-600, #52525b);
+    background-color: var(--gray-800, #27272a);
+}
+
+/* Titled and moved by the same bar: it is a handle either way. */
+.fi-arte-emoji-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-block-end: 0.125rem;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+}
+
+.fi-arte-emoji-header:active {
+    cursor: grabbing;
+}
+
+.fi-arte-emoji-title {
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1rem;
+    color: var(--gray-500, #71717a);
+}
+
+.fi-arte-emoji-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+    border-radius: 0.25rem;
+    color: var(--gray-400, #a1a1aa);
+    cursor: pointer;
+}
+
+.fi-arte-emoji-close svg {
+    inline-size: 0.875rem;
+    block-size: 0.875rem;
+}
+
+.fi-arte-emoji-close:hover {
+    color: var(--gray-600, #52525b);
+    background-color: rgba(9, 9, 11, 0.06);
+}
+
+.fi-arte-emoji-close:hover:where(.dark, .dark *) {
+    color: var(--gray-300, #d4d4d8);
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.fi-arte-emoji-search {
+    inline-size: 100%;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    border: 1px solid var(--gray-300, #d4d4d8);
+    background-color: transparent;
+    font-size: 0.8125rem;
+    line-height: 1.25rem;
+    color: inherit;
+}
+
+.fi-arte-emoji-search:where(.dark, .dark *) {
+    border-color: var(--gray-600, #52525b);
+}
+
+.fi-arte-emoji-search:focus {
+    outline: 2px solid var(--primary-600, #2563eb);
+    outline-offset: -1px;
+}
+
+.fi-arte-emoji-tabs {
+    display: flex;
+    gap: 0.125rem;
+    padding-block-end: 0.375rem;
+    border-block-end: 1px solid var(--fi-arte-divider-color, rgba(9, 9, 11, 0.1));
+}
+
+.fi-arte-emoji-tabs:where(.dark, .dark *) {
+    border-block-end-color: rgba(255, 255, 255, 0.1);
+}
+
+.fi-arte-emoji-tab {
+    flex: 1 1 0;
+    padding-block: 0.125rem;
+    border-radius: 0.375rem;
+    font-size: 1rem;
+    line-height: 1.25rem;
+    cursor: pointer;
+    /* Greyed out until picked: nine coloured emoji in a row read as content, not as tabs. */
+    filter: grayscale(1);
+    opacity: 0.6;
+}
+
+.fi-arte-emoji-tab:hover,
+.fi-arte-emoji-tab.fi-active {
+    filter: none;
+    opacity: 1;
+}
+
+.fi-arte-emoji-tab.fi-active {
+    background-color: rgba(9, 9, 11, 0.06);
+}
+
+.fi-arte-emoji-tab.fi-active:where(.dark, .dark *) {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.fi-arte-emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(2rem, 1fr));
+    gap: 0.125rem;
+    overflow-y: auto;
+    flex: 1 1 auto;
+    /* The emoji font, so the grid does not fall back to whatever the panel inherited. */
+    font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
+}
+
+.fi-arte-emoji-item {
+    aspect-ratio: 1;
+    border-radius: 0.375rem;
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.fi-arte-emoji-item:hover,
+.fi-arte-emoji-item:focus-visible {
+    background-color: rgba(9, 9, 11, 0.06);
+    outline: none;
+}
+
+.fi-arte-emoji-item:hover:where(.dark, .dark *),
+.fi-arte-emoji-item:focus-visible:where(.dark, .dark *) {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.fi-arte-emoji-empty {
+    padding-block: 1rem;
+    text-align: center;
+    font-size: 0.8125rem;
+    color: var(--gray-500, #71717a);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Image panels                                                               */
+/* -------------------------------------------------------------------------- */
+
+.fi-arte-image-panel-menu {
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    min-inline-size: 13rem;
+}
+
+.fi-arte-image-panel-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.fi-arte-image-panel-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    flex: 1 1 0;
+    min-inline-size: 0;
+}
+
+.fi-arte-image-panel-label {
+    font-size: 0.6875rem;
+    line-height: 1rem;
+    color: var(--gray-500, #71717a);
+}
+
+.fi-arte-image-panel-input {
+    inline-size: 100%;
+    padding: 0.25rem 0.375rem;
+    border: 1px solid var(--fi-arte-divider-color, rgba(9, 9, 11, 0.15));
+    border-radius: 0.375rem;
+    background-color: transparent;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    color: inherit;
+}
+
+.fi-arte-image-panel-input:where(.dark, .dark *) {
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.fi-arte-image-panel-input:focus {
+    outline: 2px solid var(--primary-600, #2563eb);
+    outline-offset: -1px;
+}
+
+.fi-arte-image-panel-hint {
+    margin: 0;
+    font-size: 0.6875rem;
+    line-height: 1rem;
+    color: var(--gray-400, #a1a1aa);
+}
+
+.fi-arte-image-panel-reset {
+    align-self: flex-start;
+    padding: 0.25rem 0.375rem;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    cursor: pointer;
+}
+
+.fi-arte-image-panel-reset:hover {
+    background-color: rgba(9, 9, 11, 0.05);
+}
+
+.fi-arte-image-panel-reset:hover:where(.dark, .dark *) {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+
+.fi-arte-image-panel-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.fi-arte-image-panel-apply {
+    padding: 0.25rem 0.625rem;
+    border-radius: 0.375rem;
+    background-color: var(--primary-600, #2563eb);
+    color: #fff;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.fi-arte-image-panel-apply[disabled] {
+    opacity: 0.5;
+    cursor: default;
+}
+
+/* Sits between the two fields, where it says what it links. */
+.fi-arte-image-panel-lock {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    align-self: flex-end;
+    inline-size: 1.75rem;
+    block-size: 1.75rem;
+    margin-block-end: 0.0625rem;
+    border-radius: 0.375rem;
+    color: var(--gray-500, #71717a);
+    cursor: pointer;
+}
+
+.fi-arte-image-panel-lock:hover {
+    background-color: rgba(9, 9, 11, 0.05);
+}
+
+.fi-arte-image-panel-lock:hover:where(.dark, .dark *) {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Unlocked is the state worth pointing out, so that is the one with the accent. */
+.fi-arte-image-panel-lock.fi-active {
+    color: var(--primary-600, #2563eb);
+}
+
+.fi-arte-image-panel-lock.fi-active:where(.dark, .dark *) {
+    color: var(--primary-400, #60a5fa);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Character count                                                            */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Sits under the editor, in Filament's own slot for things below a field. Right aligned and
+ * quiet: it is a number to glance at, not to read, until it has something to say.
+ */
+.fi-arte-character-count {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--gray-500, #71717a);
+}
+
+.fi-arte-character-count-warning {
+    color: var(--warning-600, #ca8a04);
+}
+
+.fi-arte-character-count-warning:where(.dark, .dark *) {
+    color: var(--warning-400, #facc15);
+}
+
+.fi-arte-character-count-danger {
+    color: var(--danger-600, #dc2626);
+    font-weight: 500;
+}
+
+.fi-arte-character-count-danger:where(.dark, .dark *) {
+    color: var(--danger-400, #f87171);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Slash menu                                                                 */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * The panel typing `/` opens. It lives on `document.body` rather than inside the editor,
+ * because a field with `maxHeight()` scrolls and a menu clipped by that box would be
+ * unusable on the last line - so it is positioned in page coordinates and needs a z-index
+ * above the editor and below Filament's modals, the same band the emoji picker sits in.
+ */
+.fi-arte-slash {
+    position: fixed;
+    z-index: 40;
+    /* Narrower than the panel is possible on a phone; the menu shrinks rather than
+       hanging off the edge. */
+    width: min(16rem, calc(100vw - 1rem));
+    max-height: 20rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0.375rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--fi-arte-slash-border, rgb(228 228 231));
+    background-color: var(--fi-arte-slash-bg, #fff);
+    box-shadow:
+        0 10px 15px -3px rgb(0 0 0 / 0.1),
+        0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+.fi-arte-slash:where(.dark, .dark *) {
+    --fi-arte-slash-border: rgb(63 63 70);
+    --fi-arte-slash-bg: rgb(24 24 27);
+}
+
+.fi-arte-slash-group + .fi-arte-slash-group {
+    margin-top: 0.375rem;
+}
+
+.fi-arte-slash-group-label {
+    padding: 0.375rem 0.5rem 0.25rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--fi-arte-slash-muted, rgb(113 113 122));
+}
+
+.fi-arte-slash-item {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.375rem 0.5rem;
+    border-radius: 0.5rem;
+    text-align: start;
+    font-size: 0.875rem;
+    color: inherit;
+    cursor: pointer;
+}
+
+/*
+ * Hover is not styled separately: the pointer moves the same selection the arrow keys do,
+ * so there is one active row rather than two things competing to look chosen.
+ */
+.fi-arte-slash-item-active {
+    background-color: var(--fi-arte-slash-active, rgb(244 244 245));
+}
+
+.fi-arte-slash-item-active:where(.dark, .dark *) {
+    --fi-arte-slash-active: rgb(39 39 42);
+}
+
+.fi-arte-slash-item-icon {
+    display: flex;
+    flex-shrink: 0;
+    color: var(--fi-arte-slash-muted, rgb(113 113 122));
+}
+
+.fi-arte-slash-item-icon svg {
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+.fi-arte-slash-item-label {
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fi-arte-slash-empty {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.875rem;
+    color: var(--fi-arte-slash-muted, rgb(113 113 122));
+}
+
+.fi-arte-slash:where(.dark, .dark *) .fi-arte-slash-group-label,
+.fi-arte-slash:where(.dark, .dark *) .fi-arte-slash-item-icon,
+.fi-arte-slash:where(.dark, .dark *) .fi-arte-slash-empty {
+    --fi-arte-slash-muted: rgb(161 161 170);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Video embeds                                                               */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * The frame on a rendered page. The wrapper carries the aspect ratio - written into its
+ * own `style`, which is what survives the sanitiser - and the frame fills it, so the video
+ * keeps its shape at any width without anyone computing a padding hack.
+ *
+ * These two rules are the only ones here that matter outside the panel. This stylesheet is
+ * loaded into the admin, not into the page the content ends up on, so a project styling
+ * its own front end restates them there.
+ */
+.fi-arte-embed {
+    width: 100%;
+    overflow: hidden;
+    border-radius: 0.5rem;
+}
+
+.fi-arte-embed > iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+/*
+ * What the editor draws in place of the video: a card naming what will be there.
+ *
+ * Deliberately not the player. Ten embeds in one document would be ten players loading
+ * from YouTube, each with its own requests and its own cookie, in a screen where nobody is
+ * watching anything - and an iframe swallows every click, so the block could not be
+ * selected, dragged or deleted like the rest.
+ */
+.fi-arte-embed-card {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    margin: 0.75rem 0;
+    padding: 0.75rem 0.875rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--fi-arte-embed-border, rgb(228 228 231));
+    background-color: var(--fi-arte-embed-bg, rgb(250 250 250));
+    font-size: 0.875rem;
+    cursor: default;
+}
+
+.fi-arte-embed-card:where(.dark, .dark *) {
+    --fi-arte-embed-border: rgb(63 63 70);
+    --fi-arte-embed-bg: rgb(39 39 42);
+}
+
+/* The selected block reads as selected, the way an image does. */
+.fi-arte-embed-card.ProseMirror-selectednode {
+    outline: 2px solid var(--fi-arte-embed-selected, rgb(59 130 246));
+    outline-offset: 1px;
+}
+
+.fi-arte-embed-card-provider {
+    flex-shrink: 0;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    background-color: var(--fi-arte-embed-badge, rgb(228 228 231));
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+.fi-arte-embed-card-provider:where(.dark, .dark *) {
+    --fi-arte-embed-badge: rgb(63 63 70);
+}
+
+.fi-arte-embed-card-title {
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fi-arte-embed-card-start {
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+    color: var(--fi-arte-embed-muted, rgb(113 113 122));
+}
+
+.fi-arte-embed-card-start:where(.dark, .dark *) {
+    --fi-arte-embed-muted: rgb(161 161 170);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Code block language                                                        */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * The picker sits on the block rather than in the toolbar: which language a block is
+ * written in is a property of that block, and a document may hold several in different
+ * ones. It rides in the corner of the box, where it is out of the way of the code.
+ */
+.fi-arte-code-block {
+    position: relative;
+}
+
+.fi-arte-code-block-language {
+    position: absolute;
+    inset-block-start: 0.375rem;
+    inset-inline-end: 0.375rem;
+    z-index: 1;
+    padding: 0.125rem 1.5rem 0.125rem 0.5rem;
+    border-radius: 0.375rem;
+    border: 1px solid var(--fi-arte-code-border, rgb(228 228 231));
+    background-color: var(--fi-arte-code-bg, rgb(255 255 255 / 0.85));
+    font-size: 0.6875rem;
+    line-height: 1.5;
+    color: var(--fi-arte-code-text, rgb(82 82 91));
+    cursor: pointer;
+    /* Quiet until the block is worked on: chrome, not content. */
+    opacity: 0.55;
+    transition: opacity 150ms;
+}
+
+.fi-arte-code-block:hover .fi-arte-code-block-language,
+.fi-arte-code-block-language:focus {
+    opacity: 1;
+}
+
+.fi-arte-code-block-language:where(.dark, .dark *) {
+    --fi-arte-code-border: rgb(63 63 70);
+    --fi-arte-code-bg: rgb(24 24 27 / 0.85);
+    --fi-arte-code-text: rgb(212 212 216);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Image captions                                                             */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * The caption under a picture in the editor.
+ *
+ * Drawn from an attribute rather than from an element: what is stored is `data-caption` on
+ * the image, and the `<figure>` it becomes is built when the page is rendered. An `<img>`
+ * is void and cannot carry a `::after`, so the script mirrors the text onto the box
+ * Filament draws around a resizable image and the rule below reads it from there.
+ */
+[data-arte-caption]::after {
+    content: attr(data-arte-caption);
+    display: block;
+    padding-block-start: 0.375rem;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    text-align: center;
+    color: var(--fi-arte-caption-color, rgb(113 113 122));
+}
+
+[data-arte-caption]:where(.dark, .dark *)::after {
+    --fi-arte-caption-color: rgb(161 161 170);
+}
+
+/*
+ * The figure on a rendered page. Like the embed, this is restated in the project's own
+ * stylesheet - this one is loaded into the admin panel and not into the page the content
+ * ends up on - but shipping it keeps the two looking alike where both are loaded.
+ */
+.fi-arte-figure {
+    margin-inline: 0;
+}
+
+/*
+ * A picture wider than the column it sits in overflows it. Most projects have this in a
+ * reset already; the rule is scoped to the figure so it never argues with one that does.
+ */
+.fi-arte-figure img {
+    max-width: 100%;
+    height: auto;
+}
+
+.fi-arte-figure > figcaption {
+    padding-block-start: 0.375rem;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    text-align: center;
+    color: var(--fi-arte-caption-color, rgb(113 113 122));
+}
+
+/*
+ * The media browser inside the image dialog.
+ *
+ * Two columns, because choosing a picture is two questions: which one, and is this the right
+ * one. The left side answers the first by showing many at once; the right answers the second
+ * about the one that is selected, with the numbers that tell two similar photographs apart.
+ *
+ * The controls themselves are Filament's own components, so almost nothing here styles them -
+ * what follows is layout, the two ways of listing a picture, and the panel.
+ */
+.fi-arte-media {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    --fi-arte-media-border: rgb(228 228 231);
+    --fi-arte-media-bg: #fff;
+    --fi-arte-media-tile: rgb(244 244 245);
+    --fi-arte-media-hover: rgb(161 161 170);
+    --fi-arte-media-muted: rgb(113 113 122);
+    --fi-arte-media-picked: rgb(59 130 246);
+    --fi-arte-media-pending: rgb(161 98 7);
+}
+
+.fi-arte-media:where(.dark, .dark *) {
+    --fi-arte-media-border: rgb(63 63 70);
+    --fi-arte-media-bg: rgb(24 24 27);
+    --fi-arte-media-tile: rgb(39 39 42);
+    --fi-arte-media-hover: rgb(82 82 91);
+    --fi-arte-media-muted: rgb(161 161 170);
+    --fi-arte-media-pending: rgb(250 204 21);
+}
+
+/*
+ * Filament's own upload field, kept off screen rather than removed.
+ *
+ * It is the whole upload path - Livewire's protocol, the validation, the progress events - and
+ * the browser drives it: the Upload button clicks its file input, and a dropped picture is
+ * handed to the same input. Clipped rather than `display: none`, because a field that is not
+ * laid out at all cannot always be measured or focused by the widget inside it.
+ */
+.fi-arte-media-uploader {
+    /* Out of the flow and invisible, but deliberately NOT clipped to a pixel: Filament loads
+       this widget's script only once the element is on screen, and something one pixel across
+       never convincingly is - so it loaded sometimes and not others, and a picture dropped in
+       the wrong moment silently went nowhere.
+       Real size, no opacity and no pointer events: it initialises every time, is never seen,
+       and never intercepts a click meant for the library. */
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    width: 20rem;
+    height: 8rem;
+    opacity: 0;
+    pointer-events: none;
+    z-index: -1;
+}
+
+.fi-arte-media-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.fi-arte-media-header-end {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1 1 16rem;
+    justify-content: flex-end;
+}
+
+.fi-arte-media-search {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 24rem;
+}
+
+/*
+ * One control with two halves, not two buttons that happen to sit together. They are the two
+ * settings of a single switch, and sharing a border is how a segmented control says so.
+ */
+.fi-arte-media-views {
+    display: inline-flex;
+    border-radius: 0.5rem;
+    border: 1px solid var(--fi-arte-media-border);
+    overflow: hidden;
+}
+
+.fi-arte-media-view {
+    display: inline-flex;
+    padding: 0.4375rem 0.625rem;
+    color: var(--fi-arte-media-muted);
+    cursor: pointer;
+}
+
+.fi-arte-media-view svg {
+    width: 1.125rem;
+    height: 1.125rem;
+}
+
+.fi-arte-media-view + .fi-arte-media-view {
+    border-inline-start: 1px solid var(--fi-arte-media-border);
+}
+
+.fi-arte-media-view-active {
+    background-color: var(--fi-arte-media-tile);
+    color: inherit;
+}
+
+.fi-arte-media-filters {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.75rem;
+}
+
+.fi-arte-media-filter {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--fi-arte-media-muted);
+}
+
+.fi-arte-media-body {
+    position: relative;
+    display: grid;
+    /* The details column is fixed and the list takes the rest: a panel that grows with the
+       dialog wastes the space the pictures need. */
+    grid-template-columns: minmax(0, 1fr) 17rem;
+    gap: 1rem;
+    align-items: start;
+    border-radius: 0.75rem;
+    /* Transparent rather than absent, so the frame that appears while a file is over the
+       library does not shift everything by a pixel. */
+    border: 2px dashed transparent;
+    padding: 0.25rem;
+}
+
+@media (max-width: 56rem) {
+    .fi-arte-media-body {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+/*
+ * The library is the dropzone, so it is the library that lights up. A separate target would be
+ * a second place to look, sitting exactly where the pictures being compared want to be.
+ */
+.fi-arte-media-dropping {
+    border-color: var(--fi-arte-media-picked);
+    background-color: color-mix(in srgb, var(--fi-arte-media-picked) 8%, transparent);
+}
+
+.fi-arte-media-drop-note {
+    position: absolute;
+    inset-block-end: 0.5rem;
+    inset-inline: 0;
+    text-align: center;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--fi-arte-media-picked);
+    pointer-events: none;
+}
+
+.fi-arte-media-main {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+    min-width: 0;
+}
+
+.fi-arte-media-folders {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+}
+
+.fi-arte-media-folder {
+    padding: 0.25rem 0.625rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--fi-arte-media-border);
+    font-size: 0.8125rem;
+    cursor: pointer;
+}
+
+.fi-arte-media-folder-up {
+    font-weight: 600;
+}
+
+/*
+ * The two layouts. They share one element, so a tile and a row are the same thing seen two
+ * ways rather than two components that have to be kept in step.
+ */
+.fi-arte-media-grid,
+.fi-arte-media-rows {
+    /* The list scrolls, not the dialog: the search box above and the alt text field below stay
+       put while a long library is scrolled past them. */
+    max-height: 24rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0.125rem;
+}
+
+.fi-arte-media-grid {
+    display: grid;
+    /* Auto-fill rather than a fixed column count: the dialog is wide on a desktop and narrow on
+       a phone, and the same rule serves both without a breakpoint. */
+    grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+    gap: 0.625rem;
+}
+
+.fi-arte-media-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+}
+
+/*
+ * Waiting, without moving anything.
+ *
+ * The pictures that are already on screen stay exactly where they are and simply lose a little
+ * contrast until the next page answers. A message under the grid would push the dialog taller
+ * and shorter again on every filter change, sliding the tiles out from under the pointer.
+ */
+.fi-arte-media-busy {
+    opacity: 0.55;
+    transition: opacity 150ms ease-out;
+}
+
+.fi-arte-media-item {
+    display: flex;
+    cursor: pointer;
+    text-align: start;
+    border: 1px solid transparent;
+}
+
+.fi-arte-media-grid .fi-arte-media-item {
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.25rem;
+    border-radius: 0.625rem;
+    border-color: var(--fi-arte-media-border);
+    background-color: var(--fi-arte-media-bg);
+}
+
+.fi-arte-media-rows .fi-arte-media-item {
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.375rem 0.5rem;
+    border-radius: 0.5rem;
+}
+
+.fi-arte-media-item:hover {
+    border-color: var(--fi-arte-media-hover);
+}
+
+/*
+ * The picked one is marked with a ring rather than a tick in a corner: the ring is on the
+ * picture itself, and at tile size a corner badge covers the part of the image somebody is
+ * looking at to decide.
+ */
+.fi-arte-media-item-picked {
+    border-color: var(--fi-arte-media-picked);
+    box-shadow: 0 0 0 2px var(--fi-arte-media-picked);
+}
+
+/*
+ * Dashed, because the tile is provisional in the same way a dashed border is: the file is held
+ * by the form and becomes a library item when the form is saved, and navigating away before
+ * that loses it.
+ */
+.fi-arte-media-item-pending {
+    border-style: dashed;
+    border-color: var(--fi-arte-media-pending);
+}
+
+.fi-arte-media-kind {
+    flex: none;
+    width: 2.75rem;
+    padding: 0.1875rem 0;
+    border-radius: 0.375rem;
+    background-color: var(--fi-arte-media-tile);
+    color: var(--fi-arte-media-muted);
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-align: center;
+}
+
+.fi-arte-media-item-image {
+    display: block;
+    /* Contain, not cover: a library is browsed by recognising pictures, and a crop can hide the
+       half that would have been recognised. */
+    object-fit: contain;
+    border-radius: 0.5rem;
+    background-color: var(--fi-arte-media-tile);
+}
+
+.fi-arte-media-grid .fi-arte-media-item-image {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+}
+
+.fi-arte-media-rows .fi-arte-media-item-image {
+    flex: none;
+    width: 3rem;
+    height: 3rem;
+}
+
+.fi-arte-media-item-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.0625rem;
+    min-width: 0;
+}
+
+.fi-arte-media-item-label {
+    /* One line, clipped. File names are long, and a wrapping name would push the tiles in its
+       row taller than the ones beside it. */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.8125rem;
+    line-height: 1.3;
+}
+
+.fi-arte-media-grid .fi-arte-media-item-label {
+    font-size: 0.75rem;
+    color: var(--fi-arte-media-muted);
+}
+
+.fi-arte-media-item-meta {
+    font-size: 0.75rem;
+    color: var(--fi-arte-media-muted);
+}
+
+.fi-arte-media-item-pending-note {
+    font-size: 0.6875rem;
+    line-height: 1.2;
+    font-weight: 600;
+    color: var(--fi-arte-media-pending);
+}
+
+.fi-arte-media-rows .fi-arte-media-item-pending-note {
+    margin-inline-start: auto;
+}
+
+.fi-arte-media-note {
+    padding: 1rem 0;
+    text-align: center;
+    font-size: 0.875rem;
+    color: var(--fi-arte-media-muted);
+}
+
+.fi-arte-media-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    font-size: 0.8125rem;
+    color: var(--fi-arte-media-muted);
+}
+
+.fi-arte-media-count {
+    /* Never wraps under the pager: it is one short phrase, and a footer that reflows as the
+       count crosses from 9 to 10 items reads as a bug. */
+    white-space: nowrap;
+}
+
+.fi-arte-media-pages {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.fi-arte-media-page {
+    font-variant-numeric: tabular-nums;
+}
+
+.fi-arte-media-details {
+    /* Follows a long library down rather than being left behind at the top of it: the panel
+       describes whatever is selected, and a description that has scrolled off screen is not
+       describing anything. */
+    position: sticky;
+    top: 0;
+    border-radius: 0.75rem;
+    border: 1px solid var(--fi-arte-media-border);
+    background-color: var(--fi-arte-media-bg);
+    padding: 0.75rem;
+}
+
+.fi-arte-media-details-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: start;
+}
+
+.fi-arte-media-preview {
+    display: block;
+    width: 100%;
+    max-height: 11rem;
+    object-fit: contain;
+    border-radius: 0.5rem;
+    background-color: var(--fi-arte-media-tile);
+}
+
+.fi-arte-media-facts {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+}
+
+.fi-arte-media-facts dt {
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--fi-arte-media-muted);
+}
+
+.fi-arte-media-facts dd {
+    /* Long file names must wrap here rather than widen the column, which is fixed. */
+    overflow-wrap: anywhere;
+    font-weight: 500;
+}

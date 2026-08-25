@@ -60,6 +60,7 @@ class TimeEntryCalendarWidget extends CalendarWidget
             'center' => 'title',
             'end' => 'today prev,next',
         ],
+        'nowIndicator' => true,
     ];
 
     /**
@@ -143,9 +144,6 @@ class TimeEntryCalendarWidget extends CalendarWidget
         $this->mountAction('createTimeEntry');
     }
 
-    /**
-     * @return array<Action>
-     */
     /* protected function getEventClickContextMenuActions(): array
     {
         return [

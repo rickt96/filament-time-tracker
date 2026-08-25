@@ -8,12 +8,14 @@ enum ClientSyncDriver: string implements HasLabel
 {
     case ClickUp = 'clickup';
     case Jira = 'jira';
+    case H2Bit = 'h2bit';
 
     public function getLabel(): string
     {
         return match ($this) {
             self::ClickUp => 'ClickUp',
             self::Jira => 'Jira',
+            self::H2Bit => 'H2Bit',
         };
     }
 
@@ -26,6 +28,11 @@ enum ClientSyncDriver: string implements HasLabel
             ],
             self::Jira => [
                 // TODO
+            ],
+            self::H2Bit => [
+                'base_url' => '',
+                'organization' => '',
+                'api_key' => '',
             ],
         };
     }
