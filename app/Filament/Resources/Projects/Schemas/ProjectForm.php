@@ -10,6 +10,7 @@ use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\MarkdownEditor;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\ToggleButtons;
@@ -69,6 +70,23 @@ class ProjectForm
                     ->schema([
                         MarkdownEditor::make('note')
                             ->hiddenLabel()
+                            ->columnSpanFull(),
+                    ]),
+
+                Section::make('Allegati')
+                    ->columnSpanFull()
+                    ->collapsible()
+                    ->collapsed()
+                    ->schema([
+                        SpatieMediaLibraryFileUpload::make('attachments')
+                            ->hiddenLabel()
+                            ->collection('attachments')
+                            ->disk('public')
+                            ->multiple()
+                            ->reorderable()
+                            ->downloadable()
+                            ->openable()
+                            ->preserveFilenames()
                             ->columnSpanFull(),
                     ]),
 

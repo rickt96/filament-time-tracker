@@ -2,9 +2,11 @@
 
 namespace App\Filament\Resources\Projects\Pages;
 
+use App\Filament\Concerns\TracksPageVisit;
 use App\Filament\Resources\Projects\ProjectResource;
 use App\Filament\Resources\Projects\RelationManagers\TasksRelationManager;
 use App\Filament\Resources\Projects\RelationManagers\WorkPackagesRelationManager;
+use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ForceDeleteAction;
 use Filament\Actions\RestoreAction;
@@ -19,11 +21,15 @@ use Override;
 
 class EditProject extends EditRecord
 {
+    use TracksPageVisit;
+
     protected static string $resource = ProjectResource::class;
 
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('documents')
+                ->url(ProjectResource::getUrl('documents', ['record' => $this->record])),
             DeleteAction::make(),
             ForceDeleteAction::make(),
             RestoreAction::make(),

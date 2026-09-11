@@ -5,6 +5,7 @@ namespace App\Filament\Pages;
 use App\Filament\Widgets\TimeEntryCalendarWidget;
 use BackedEnum;
 use Filament\Pages\Page;
+use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 
 class Calendar extends Page
@@ -12,6 +13,8 @@ class Calendar extends Page
     protected string $view = 'filament.pages.calendar';
 
     protected static ?int $navigationSort = 20;
+
+    protected Width|string|null $maxContentWidth = 'full';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCalendarDays;
 

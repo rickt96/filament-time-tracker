@@ -37,10 +37,12 @@ class InvoicesTable
                     ->orderQueryUsing(fn (Builder $query): Builder => $query->orderBy('year', 'desc')->orderBy('number', 'asc')),
             ) */
             ->columns([
-                TextColumn::make('year')
+                /* TextColumn::make('year')
                     ->label('Anno'),
                 TextColumn::make('number')
-                    ->label('Numero'),
+                    ->label('Numero'), */
+                TextColumn::make('label')
+                    ->label('#'),
                 TextColumn::make('client.name')
                     ->label('Cliente'),
                 TextColumn::make('amount')

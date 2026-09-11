@@ -28,7 +28,7 @@ class TestCase extends Orchestra
         parent::setUp();
 
         Factory::guessFactoryNamesUsing(
-            fn (string $modelName) => 'Mokhosh\\FilamentKanban\\Tests\\Factories\\' . class_basename($modelName) . 'Factory'
+            fn (string $modelName) => 'Mokhosh\\FilamentKanban\\Tests\\Factories\\'.class_basename($modelName).'Factory'
         );
 
         $this->setUpDatabase($this->app);
@@ -57,7 +57,7 @@ class TestCase extends Orchestra
     public function getEnvironmentSetUp($app)
     {
         config()->set('database.default', 'testing');
-        config()->set('view.paths', [__DIR__ . '/Views']);
+        config()->set('view.paths', [__DIR__.'/Views']);
     }
 
     protected function setUpDatabase($app)

@@ -83,19 +83,35 @@
         </a>
     @endif
 
-    {{-- link pagina edit --}}
-    <a
-        href="{{ App\Filament\Resources\Tasks\TaskResource::getUrl('edit', ['record' => $record->getKey()]) }}"
-        target="_blank"
-        rel="noopener noreferrer"
-        x-on:click.stop
-        class="flex items-center gap-1 text-xs text-gray-400 transition hover:text-primary-600 dark:hover:text-primary-400"
-    >
-        <x-filament::icon
-            icon="heroicon-m-pencil-square"
-            class="size-3.5 shrink-0"
-        />
-        <span class="truncate">Modifica</span>
-    </a>
+    <div class="flex items-center gap-3">
+        {{-- link pagina edit --}}
+        <a
+            href="{{ App\Filament\Resources\Tasks\TaskResource::getUrl('edit', ['record' => $record->getKey()]) }}"
+            target="_blank"
+            rel="noopener noreferrer"
+            x-on:click.stop
+            class="flex items-center gap-1 text-xs text-gray-400 transition hover:text-primary-600 dark:hover:text-primary-400"
+        >
+            <x-filament::icon
+                icon="heroicon-m-pencil-square"
+                class="size-3.5 shrink-0"
+            />
+            <span class="truncate">Modifica</span>
+        </a>
+
+        {{-- `.stop` tiene fuori il click del card (che aprirebbe il modale di modifica). --}}
+        <button
+            type="button"
+            x-on:click.stop
+            wire:click.stop="mountAction('logTimeEntry', { record: {{ $record->getKey() }} })"
+            class="flex items-center gap-1 text-xs text-gray-400 transition hover:text-primary-600 dark:hover:text-primary-400"
+        >
+            <x-filament::icon
+                icon="heroicon-m-clock"
+                class="size-3.5 shrink-0"
+            />
+            <span class="truncate">Registra ore</span>
+        </button>
+    </div>
 
 </div>

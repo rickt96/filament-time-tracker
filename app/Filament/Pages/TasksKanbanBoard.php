@@ -2,12 +2,12 @@
 
 namespace App\Filament\Pages;
 
+use App\Actions\TimeEntry\CreateTimeEntryAction;
 use App\Enums\ClientSyncDriver;
 use App\Enums\ProjectStatus;
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
 use App\Enums\WorkPackageStatus;
-use App\Filament\Forms\Components\RichEditor\TaskMentionProvider;
 use App\Filament\Resources\Tasks\Schemas\TaskForm;
 use App\Filament\Resources\Tasks\TaskResource;
 use App\Models\Project;
@@ -16,19 +16,19 @@ use App\Models\WorkPackage;
 use App\Models\Workspace;
 use App\Services\Sync\Drivers\ClickUpDriver;
 use App\Services\Sync\Exceptions\ClickUpImportException;
-use App\Support\TagOptions;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Facades\Filament;
-use Filament\Forms\Components\DateTimePicker;
-use Filament\Forms\Components\RichEditor;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TagsInput;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\ToggleButtons;
+use Filament\Forms\Components\TimePicker;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Component;
+use Filament\Schemas\Components\FusedGroup;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
@@ -37,6 +37,8 @@ use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 use Mokhosh\FilamentKanban\Pages\KanbanBoard;
 use Override;
 
@@ -58,7 +60,7 @@ class TasksKanbanBoard extends KanbanBoard
 
     protected static string $recordStatusAttribute = 'status';
 
-    protected Width|string|null $maxContentWidth = 'full';
+    protected Width|string|null $maxContentWidth = Width::Full->value;
 
     protected static string $recordView = 'filament.kanban.tasks.record';
 
@@ -97,7 +99,7 @@ class TasksKanbanBoard extends KanbanBoard
 
     protected bool $editModalSlideOver = false;
 
-    protected string $editModalWidth = '4xl';
+    protected string $editModalWidth = Width::ScreenTwoExtraLarge->value;
 
     /**
      * State of the filter bar above the board.
@@ -285,58 +287,7 @@ class TasksKanbanBoard extends KanbanBoard
     #[Override]
     protected function getEditModalFormSchema(null|int|string $recordId): array
     {
-        return [
-            TextInput::make('name')
-                ->label('Nome')
-                ->hiddenLabel()
-                ->required()
-                ->maxLength(255)
-                ->columnSpanFull(),
-            Grid::make(1)
-                ->inlineLabel()
-                ->schema([
-                    ToggleButtons::make('status')
-                        ->label('Stato')
-                        ->options(TaskStatus::class)
-                        ->required()
-                        ->inline(),
-                    /* ToggleButtons::make('priority')
-                        ->label('Priorità')
-                        ->options(TaskPriority::class)
-                        ->required()
-                        ->inline(), */
-                    /* Select::make('assignee_id')
-                        ->label('Assegnatario')
-                        ->options(fn (): array => $this->assigneeOptions())
-                        ->searchable(), */
-                    DateTimePicker::make('expire')
-                        ->label('Scadenza'),
-                    TextInput::make('url')
-                        ->label('URL')
-                        ->url()
-                        ->live()
-                        ->suffixAction(
-                            Action::make('task_url_goto')
-                                ->visible(fn ($get) => filter_var($get('url'), FILTER_VALIDATE_URL))
-                                ->icon(Heroicon::ArrowTopRightOnSquare)
-                                ->url(fn ($get) => $get('url'), true),
-                            true
-                        ),
-                ]),
-            TagsInput::make('tags')
-                ->inlineLabel()
-                ->label('Tag')
-                ->columnSpanFull()
-                ->suggestions(fn (): array => array_values(TagOptions::from($this->getEloquentQuery()))),
-            RichEditor::make('description')
-                ->label('Descrizione')
-                ->hiddenLabel()
-                ->fileAttachmentsDirectory('tasks')
-                ->mentions([
-                    TaskMentionProvider::make(),
-                ])
-                ->columnSpanFull(),
-        ];
+        return TaskForm::components();
     }
 
     /**
@@ -487,6 +438,11 @@ class TasksKanbanBoard extends KanbanBoard
                 ->label('Nuovo task')
                 ->icon(Heroicon::OutlinedPlus)
                 ->modalWidth('4xl')
+                // senza model esplicito, i campi Select con ->relationship()
+                // (es. assignee_id) non trovano un record da cui risalire al
+                // model e falliscono — a differenza del modale di modifica,
+                // qui non c'è un Task già legato allo schema.
+                ->model(Task::class)
                 ->schema(TaskForm::components())
                 ->action(function (array $data): void {
                     Task::create($data);
@@ -511,7 +467,10 @@ class TasksKanbanBoard extends KanbanBoard
     /**
      * Only ClickUp is supported for now — the project Select is scoped to
      * clients configured for that driver, so picking a project already
-     * guarantees the import can be attempted.
+     * guarantees the import can be attempted. All ids in the repeater import
+     * against the same project, one ClickUpDriver::importTask() call each —
+     * a failure on one id doesn't stop the rest, it's just tallied up in the
+     * summary notification at the end.
      */
     protected function importTaskAction(): Action
     {
@@ -532,20 +491,110 @@ class TasksKanbanBoard extends KanbanBoard
                         ->all())
                     ->searchable()
                     ->required(),
-                TextInput::make('external_task_id')
-                    ->label('ID task ClickUp')
-                    ->required(),
+                Repeater::make('external_task_ids')
+                    ->label('Task ClickUp da importare')
+                    ->simple(
+                        TextInput::make('external_task_id')
+                            ->required(),
+                    )
+                    ->addActionLabel('Aggiungi task')
+                    ->defaultItems(1)
+                    ->minItems(1),
             ])
             ->action(function (array $data): void {
                 $project = Project::findOrFail((int) $data['project_id']);
 
+                /** @var array<int, string> $externalTaskIds */
+                $externalTaskIds = array_values(array_filter(array_map(
+                    fn (string $id): string => trim($id),
+                    $data['external_task_ids'] ?? [],
+                )));
+
+                $imported = 0;
+                $errors = [];
+
+                foreach ($externalTaskIds as $externalTaskId) {
+                    try {
+                        app(ClickUpDriver::class)->importTask($project, $externalTaskId);
+                        $imported++;
+                    } catch (ClickUpImportException $exception) {
+                        $errors[] = "{$externalTaskId}: {$exception->getMessage()}";
+                    }
+                }
+
+                $notification = Notification::make()
+                    ->title("Import completato: {$imported} riusciti, ".count($errors).' falliti')
+                    ->body(filled($errors) ? implode("\n", $errors) : null);
+
+                match (true) {
+                    $imported === 0 => $notification->danger(),
+                    filled($errors) => $notification->warning(),
+                    default => $notification->success(),
+                };
+
+                $notification->send();
+            });
+    }
+
+    /**
+     * Per-card quick time logging. Triggered from the record view with the
+     * task id as the `record` argument (mountAction). The project/work
+     * package/rate are all derived from the task by CreateTimeEntryAction, so
+     * the modal only asks for the date and the from/to times.
+     */
+    public function logTimeEntryAction(): Action
+    {
+        return Action::make('logTimeEntry')
+            ->label('Registra ore')
+            ->icon(Heroicon::OutlinedClock)
+            ->modalHeading('Registra ore')
+            ->modalSubmitActionLabel('Registra')
+            ->schema([
+                DatePicker::make('date')
+                    ->label('Data')
+                    ->required()
+                    ->default(now()),
+                FusedGroup::make([
+                    TimePicker::make('started_at')
+                        ->hiddenLabel()
+                        ->seconds(false)
+                        ->default(now()->format('H:i'))
+                        ->required(),
+                    TimePicker::make('ended_at')
+                        ->hiddenLabel()
+                        ->seconds(false)
+                        ->default(now()->addHour()->format('H:i'))
+                        ->required(),
+                ])
+                    ->label('Dalle / alle'),
+                Textarea::make('description')
+                    ->label('Descrizione')
+                    ->maxLength(1000),
+            ])
+            ->action(function (array $data, array $arguments): void {
+                /** @var Task|null $task */
+                $task = $this->getEloquentQuery()->find($arguments['record'] ?? null);
+
+                if ($task === null) {
+                    Notification::make()->danger()->title('Task non trovato')->send();
+
+                    return;
+                }
+
                 try {
-                    $task = app(ClickUpDriver::class)->importTask($project, $data['external_task_id']);
-                } catch (ClickUpImportException $exception) {
+                    app(CreateTimeEntryAction::class)->handle(Auth::user(), [
+                        'project_id' => $task->workPackage->project_id,
+                        'task_id' => $task->getKey(),
+                        'date' => $data['date'],
+                        'started_at' => $data['started_at'],
+                        'ended_at' => $data['ended_at'],
+                        'description' => $data['description'] ?? null,
+                    ]);
+                } catch (ValidationException $exception) {
                     Notification::make()
                         ->danger()
-                        ->title('Import fallito')
-                        ->body($exception->getMessage())
+                        ->title('Registrazione non riuscita')
+                        ->body(collect($exception->errors())->flatten()->implode("\n"))
                         ->send();
 
                     return;
@@ -553,16 +602,8 @@ class TasksKanbanBoard extends KanbanBoard
 
                 Notification::make()
                     ->success()
-                    ->title('Task importato')
+                    ->title('Ore registrate')
                     ->body("« {$task->name} »")
-                    ->actions([
-                        Action::make('delete')
-                            ->label('Annulla')
-                            ->action(fn () => $task->delete()),
-                        Action::make('edit')
-                            ->label('Modifica')
-                            ->url(TaskResource::getUrl('edit', ['record' => $task])),
-                    ])
                     ->send();
             });
     }

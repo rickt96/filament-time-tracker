@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 
 /**
  * @property int $id
@@ -28,9 +30,9 @@ use Illuminate\Support\Carbon;
  * @property-read string $label
  */
 #[Fillable(['workspace_id', 'client_id', 'year', 'number', 'amount', 'status', 'sent_at', 'collected_at', 'note'])]
-class Invoice extends Model
+class Invoice extends Model implements HasMedia
 {
-    use SoftDeletes;
+    use InteractsWithMedia, SoftDeletes;
 
     protected function casts(): array
     {

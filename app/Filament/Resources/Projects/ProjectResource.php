@@ -2,9 +2,11 @@
 
 namespace App\Filament\Resources\Projects;
 
+use App\Filament\Resources\Documents\RelationManagers\DocumentsRelationManager;
 use App\Filament\Resources\Projects\Pages\CreateProject;
 use App\Filament\Resources\Projects\Pages\EditProject;
 use App\Filament\Resources\Projects\Pages\ListProjects;
+use App\Filament\Resources\Projects\Pages\ProjectDocuments;
 use App\Filament\Resources\Projects\RelationManagers\MembersRelationManager;
 use App\Filament\Resources\Projects\RelationManagers\TasksRelationManager;
 use App\Filament\Resources\Projects\RelationManagers\TimeEntriesRelationManager;
@@ -51,6 +53,7 @@ class ProjectResource extends Resource
             TasksRelationManager::class,
             TimeEntriesRelationManager::class,
             MembersRelationManager::class,
+            // DocumentsRelationManager::class,
         ];
     }
 
@@ -60,6 +63,7 @@ class ProjectResource extends Resource
             'index' => ListProjects::route('/'),
             'create' => CreateProject::route('/create'),
             'edit' => EditProject::route('/{record}/edit'),
+            'documents' => ProjectDocuments::route('/{record}/documents/{document?}'),
         ];
     }
 

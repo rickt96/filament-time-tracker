@@ -38,3 +38,16 @@
 .grabbing * {
     cursor: grabbing !important;
 }
+
+/*
+ * The rich editor's floating toolbar (z-20, position:absolute) can end up
+ * above a Filament modal (z-40) when the editor and the action that opens
+ * the modal live in different DOM subtrees (e.g. a tree/table widget in a
+ * sidebar plus a form elsewhere on the page) — the modal is teleported by
+ * Alpine and local z-index comparison isn't reliable there. Rather than
+ * chase the exact z-index, the toolbar just hides while any modal is open.
+ */
+body:has(.fi-modal) .fi-fo-rich-editor-floating-toolbar {
+    visibility: hidden !important;
+    pointer-events: none !important;
+}

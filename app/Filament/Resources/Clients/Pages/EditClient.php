@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Clients\Pages;
 
+use App\Filament\Concerns\TracksPageVisit;
 use App\Filament\Resources\Clients\ClientResource;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ForceDeleteAction;
@@ -11,6 +12,8 @@ use Override;
 
 class EditClient extends EditRecord
 {
+    use TracksPageVisit;
+
     protected static string $resource = ClientResource::class;
 
     protected function getHeaderActions(): array

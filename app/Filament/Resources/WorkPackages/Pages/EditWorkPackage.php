@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\WorkPackages\Pages;
 
+use App\Filament\Concerns\TracksPageVisit;
 use App\Filament\Resources\WorkPackages\WorkPackageResource;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ForceDeleteAction;
@@ -11,6 +12,8 @@ use Override;
 
 class EditWorkPackage extends EditRecord
 {
+    use TracksPageVisit;
+
     protected static string $resource = WorkPackageResource::class;
 
     protected function getHeaderActions(): array

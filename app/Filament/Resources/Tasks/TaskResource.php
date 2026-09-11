@@ -114,7 +114,7 @@ class TaskResource extends Resource
     public static function getGlobalSearchResultActions(Model $record): array
     {
         return [
-            //EditAction::make(),
+            // EditAction::make(),
             // ->icon(Heroicon::PencilSquare),
             Action::make('create-time-entry')
                 ->label('Crea time entry')

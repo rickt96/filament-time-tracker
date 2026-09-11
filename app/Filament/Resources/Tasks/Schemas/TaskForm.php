@@ -4,6 +4,8 @@ namespace App\Filament\Resources\Tasks\Schemas;
 
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
+use App\Enums\TaskType;
+use App\Filament\Forms\Components\RichEditor\OpenLinkOnCtrlClickPlugin;
 use App\Filament\Forms\Components\RichEditor\RichContentCustomBlocks\ChecklistBlock;
 use App\Filament\Forms\Components\RichEditor\TaskMentionProvider;
 use App\Models\Task;
@@ -14,6 +16,7 @@ use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\RichEditor\ToolbarButtonGroup;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Component;
@@ -36,7 +39,7 @@ class TaskForm
     public static function components(): array
     {
         return [
-            Section::make('Dettagli')
+            Section::make(null)
                 ->columns(2)
                 ->inlineLabel()
                 ->columnSpanFull()
@@ -82,6 +85,9 @@ class TaskForm
                         ->options(TaskStatus::class)
                         ->default(TaskStatus::Todo)
                         ->required(),
+                    Select::make('type')
+                        ->label('Tipo')
+                        ->options(TaskType::class),
                     Select::make('priority')
                         ->label('Priorità')
                         ->options(TaskPriority::class)
@@ -109,21 +115,42 @@ class TaskForm
                             ->disabled(), */
                     TagsInput::make('tags')
                         ->inlineLabel()
-                        ->label('Tag')
+                        ->label('Tags')
                         ->suggestions(fn (): array => array_values(TagOptions::from(
                             Task::query()->whereHas(
                                 'workPackage.project',
                                 fn (Builder $query) => $query->where('workspace_id', Filament::getTenant()?->getKey()),
                             ),
-                        )))
-                        ->columnSpanFull(),
+                        ))),
                 ]),
+
             Section::make('Descrizione')
                 ->columnSpanFull()
                 ->collapsible()
                 ->collapsed()
                 ->schema([
                     self::getDescriptionEditor(),
+                ]),
+
+            Section::make('Allegati')
+                ->columnSpanFull()
+                ->collapsible()
+                ->collapsed()
+                ->schema([
+                    SpatieMediaLibraryFileUpload::make('attachments')
+                        ->hiddenLabel()
+                        ->collection(Task::MEDIA_COLLECTION_ATTACHMENTS)
+                        ->disk('public')
+                        ->multiple()
+                        ->reorderable()
+                        ->downloadable()
+                        ->openable()
+                        // nome originale sul disco (invece dell'ULID di default),
+                        // così download/apertura mostrano il nome vero. Sicuro qui:
+                        // ModelFolderPathGenerator dà a ogni media una sottocartella
+                        // dedicata (per id), quindi nessun rischio di collisione nomi.
+                        ->preserveFilenames()
+                        ->columnSpanFull(),
                 ]),
         ];
     }
@@ -205,6 +232,9 @@ class TaskForm
             ->mentions([
                 TaskMentionProvider::make(),
             ])
+            ->plugins([
+                OpenLinkOnCtrlClickPlugin::make(),
+            ])
             ->taskList()
             ->listTypes(['bulletList', 'orderedList', 'taskList'])
             ->enableToolbarButtons([
@@ -222,9 +252,9 @@ class TaskForm
                     'tableDelete',
                 ],
             ])
-            ->customBlocks([
+            /* ->customBlocks([
                 ChecklistBlock::class,
-            ])
+            ]) */
             ->columnSpanFull();
     }
 }

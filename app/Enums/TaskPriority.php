@@ -7,7 +7,7 @@ use Filament\Support\Contracts\HasLabel;
 
 enum TaskPriority: string implements HasColor, HasLabel
 {
-    case Alta = 'high'; // 
+    case Alta = 'high'; //
     case Media = 'medium';
     case Bassa = 'low'; // 20
     case NiceToHave = 'nice-to-have'; // 10

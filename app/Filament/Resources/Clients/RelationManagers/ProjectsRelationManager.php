@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Clients\RelationManagers;
 
 use App\Enums\ProjectStatus;
+use App\Filament\Resources\Projects\ProjectResource;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
@@ -70,6 +71,7 @@ class ProjectsRelationManager extends RelationManager
                 EditAction::make(),
                 DeleteAction::make(),
             ])
+            ->recordUrl(fn ($record) => ProjectResource::getUrl('edit', ['record' => $record]))
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),

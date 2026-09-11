@@ -2,12 +2,14 @@
 
 namespace App\Filament\Resources\Clients;
 
+use App\Filament\Resources\Clients\Pages\ClientDocuments;
 use App\Filament\Resources\Clients\Pages\CreateClient;
 use App\Filament\Resources\Clients\Pages\EditClient;
 use App\Filament\Resources\Clients\Pages\ListClients;
 use App\Filament\Resources\Clients\RelationManagers\ProjectsRelationManager;
 use App\Filament\Resources\Clients\Schemas\ClientForm;
 use App\Filament\Resources\Clients\Tables\ClientsTable;
+use App\Filament\Resources\Documents\RelationManagers\DocumentsRelationManager;
 use App\Models\Client;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -45,6 +47,7 @@ class ClientResource extends Resource
     {
         return [
             ProjectsRelationManager::class,
+            // DocumentsRelationManager::class,
         ];
     }
 
@@ -54,6 +57,7 @@ class ClientResource extends Resource
             'index' => ListClients::route('/'),
             'create' => CreateClient::route('/create'),
             'edit' => EditClient::route('/{record}/edit'),
+            'documents' => ClientDocuments::route('/{record}/documents/{document?}'),
         ];
     }
 

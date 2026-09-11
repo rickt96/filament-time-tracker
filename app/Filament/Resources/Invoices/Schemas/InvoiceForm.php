@@ -4,14 +4,19 @@ namespace App\Filament\Resources\Invoices\Schemas;
 
 use App\Enums\InvoiceStatus;
 use App\Models\Invoice;
+use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\MarkdownEditor;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\ToggleButtons;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
+use Filament\Support\RawJs;
 use Illuminate\Database\Eloquent\Builder;
 
 class InvoiceForm
@@ -45,17 +50,29 @@ class InvoiceForm
                             ->label('Numero anno')
                             ->numeric()
                             ->required()
-                            ->default(function() { 
+                            ->default(function () {
                                 $maxYearNumber = Invoice::query()->where('year', now()->year)->max('number');
+
                                 return ($maxYearNumber != null)
-                                            ? $maxYearNumber + 1 
+                                            ? $maxYearNumber + 1
                                             : 1;
                             }),
                         TextInput::make('amount')
                             ->label('Importo')
-                            ->numeric()
                             ->prefix('€')
-                            ->required(),
+                            ->mask(RawJs::make('$money($input)'))
+                            ->stripCharacters(',')
+                            ->numeric()
+                            ->required()
+                            ->suffixAction(
+                                Action::make('calculateFromTimeEntries')
+                                    ->icon(Heroicon::OutlinedCalculator)
+                                    ->tooltip('Calcola dalle time entries collegate')
+                                    ->visible(fn (?Invoice $record): bool => $record !== null)
+                                    ->action(function (Set $set, ?Invoice $record): void {
+                                        $set('amount', $record?->timeEntries()->sum('total_amount'));
+                                    }),
+                            ),
                         DatePicker::make('sent_at')
                             ->label('Data invio'),
                         DatePicker::make('collected_at')
@@ -85,9 +102,25 @@ class InvoiceForm
                     ->schema([
                         MarkdownEditor::make('note')
                             ->hiddenLabel()
-                            ->maxLength(1000)
                             ->fileAttachmentsDisk('public')
                             ->fileAttachmentsDirectory('invoices')
+                            ->columnSpanFull(),
+                    ]),
+
+                Section::make('Allegati')
+                    ->columnSpanFull()
+                    ->collapsible()
+                    ->collapsed()
+                    ->schema([
+                        SpatieMediaLibraryFileUpload::make('attachments')
+                            ->hiddenLabel()
+                            ->collection('attachments')
+                            ->disk('public')
+                            ->multiple()
+                            ->reorderable()
+                            ->downloadable()
+                            ->openable()
+                            ->preserveFilenames()
                             ->columnSpanFull(),
                     ]),
             ]);

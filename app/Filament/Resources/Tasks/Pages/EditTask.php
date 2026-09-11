@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Tasks\Pages;
 
+use App\Filament\Concerns\TracksPageVisit;
 use App\Filament\Resources\Tasks\TaskResource;
 use App\Models\Task;
 use Filament\Actions\Action;
@@ -11,6 +12,7 @@ use Filament\Actions\RestoreAction;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\HtmlString;
@@ -19,7 +21,11 @@ use Parallax\FilamentComments\Actions\CommentsAction;
 
 class EditTask extends EditRecord
 {
+    use TracksPageVisit;
+
     protected static string $resource = TaskResource::class;
+
+    protected Width|string|null $maxContentWidth = 'full';
 
     #[Override]
     public function getHeading(): string|Htmlable|null

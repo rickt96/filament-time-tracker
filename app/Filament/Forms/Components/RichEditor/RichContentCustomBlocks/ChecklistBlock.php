@@ -5,10 +5,8 @@ namespace App\Filament\Forms\Components\RichEditor\RichContentCustomBlocks;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\Repeater;
-use Filament\Forms\Components\Repeater\TableColumn;
 use Filament\Forms\Components\RichEditor\RichContentCustomBlock;
 use Filament\Forms\Components\TextInput;
-use Filament\Tables\Columns\TextColumn;
 
 class ChecklistBlock extends RichContentCustomBlock
 {
@@ -41,7 +39,7 @@ class ChecklistBlock extends RichContentCustomBlock
                             ->hiddenLabel()
                             ->columnSpan(3),
                     ])
-                    ->columns(4)
+                    ->columns(4),
             ]);
     }
 
@@ -49,16 +47,16 @@ class ChecklistBlock extends RichContentCustomBlock
     // FINIRE STO BLOCCO
     public static function toPreviewHtml(array $config): string
     {
-        //dd($config);
+        // dd($config);
         return view('filament.forms.components.rich-editor.rich-content-custom-blocks.hero.preview', [
-            'items' => $config["items"]
+            'items' => $config['items'],
         ])->render();
     }
 
     public static function toHtml(array $config, array $data): string
     {
         return view('filament.forms.components.rich-editor.rich-content-custom-blocks.hero.index', [
-             'items' => $config["items"]
+            'items' => $config['items'],
         ])->render();
     }
 }

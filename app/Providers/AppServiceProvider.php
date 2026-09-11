@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use Carbon\CarbonImmutable;
+use Filament\Support\Assets\Js;
+use Filament\Support\Facades\FilamentAsset;
 use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Date;
@@ -26,6 +28,13 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+
+        // register estensione custom richEditor (TipTap)
+        // per aprire i link in edit con ctrl+click.
+        // vedi app\Filament\Forms\Components\RichEditor\OpenLinkOnCtrlClickPlugin.php
+        FilamentAsset::register([
+            Js::make('open-link-on-ctrl-click', resource_path('js/rich-editor/open-link-on-ctrl-click.js')),
+        ]);
     }
 
     /**

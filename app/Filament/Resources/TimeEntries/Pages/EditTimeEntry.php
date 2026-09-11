@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\TimeEntries\Pages;
 
 use App\Actions\TimeEntry\UpdateTimeEntryAction;
+use App\Filament\Concerns\TracksPageVisit;
 use App\Filament\Resources\TimeEntries\TimeEntryResource;
 use App\Models\TimeEntry;
 use Filament\Actions\DeleteAction;
@@ -13,6 +14,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class EditTimeEntry extends EditRecord
 {
+    use TracksPageVisit;
+
     protected static string $resource = TimeEntryResource::class;
 
     protected function getHeaderActions(): array

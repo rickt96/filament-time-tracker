@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Projects\RelationManagers;
 
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
+use App\Enums\TaskType;
 use App\Filament\Support\TaskDetailsAction;
 use App\Models\Project;
 use App\Models\WorkPackage;
@@ -38,7 +39,7 @@ class TasksRelationManager extends RelationManager
 {
     protected static string $relationship = 'tasks';
 
-    protected static ?string $title = 'Task';
+    protected static ?string $title = 'Gestione task';
 
     public function form(Schema $schema): Schema
     {
@@ -56,6 +57,9 @@ class TasksRelationManager extends RelationManager
                             ->label('Stato')
                             ->options(TaskStatus::class)
                             ->required(),
+                        Select::make('type')
+                            ->label('Tipo')
+                            ->options(TaskType::class),
                         Select::make('priority')
                             ->label('Priorità')
                             ->options(TaskPriority::class)

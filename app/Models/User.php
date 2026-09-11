@@ -113,6 +113,22 @@ class User extends Authenticatable implements FilamentUser, HasTenants, PasskeyU
         return $this->morphedByMany(Client::class, 'favoritable', 'favorites')->withTimestamps();
     }
 
+    /**
+     * @return MorphToMany<Document, $this>
+     */
+    public function favoriteDocuments(): MorphToMany
+    {
+        return $this->morphedByMany(Document::class, 'favoritable', 'favorites')->withTimestamps();
+    }
+
+    /**
+     * @return HasMany<PageVisit, $this>
+     */
+    public function pageVisits(): HasMany
+    {
+        return $this->hasMany(PageVisit::class)->latest('last_opened_at');
+    }
+
     public function roleIn(Workspace $workspace): ?WorkspaceRole
     {
         /** @var WorkspaceUser|null $pivot */

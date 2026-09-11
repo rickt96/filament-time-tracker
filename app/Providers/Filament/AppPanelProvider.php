@@ -34,6 +34,9 @@ class AppPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Blue,
             ])
+            ->brandLogo(asset('logo.png'))
+            ->brandName('Time tracker')
+            ->brandLogoHeight('3rem')
             // Custom theme so the utilities used by our own Filament views and
             // by the kanban board's blade views get compiled.
             ->viteTheme('resources/css/filament/app/theme.css')
@@ -64,6 +67,7 @@ class AppPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ])
-            ->globalSearch(position: GlobalSearchPosition::Topbar);
+            ->globalSearch(position: GlobalSearchPosition::Topbar)
+            ->sidebarCollapsibleOnDesktop();
     }
 }

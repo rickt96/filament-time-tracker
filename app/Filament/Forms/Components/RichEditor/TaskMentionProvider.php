@@ -16,12 +16,14 @@ use Illuminate\Database\Eloquent\Builder;
  * (see Filament\Forms\Components\RichEditor\TipTapExtensions\MentionExtension),
  * so every place that already renders description as raw HTML (TaskDetailsAction,
  * ...) shows a working link with no further changes needed there.
+ *
+ * https://filamentexamples.com/tutorial/filament-richeditor-add-at-mentions-with-dynamic-database-search
  */
 class TaskMentionProvider
 {
     public static function make(): MentionProvider
     {
-        return MentionProvider::make('@')
+        return MentionProvider::make('#')
             ->getSearchResultsUsing(fn (string $search): array => self::query()
                 ->where('name', 'like', "%{$search}%")
                 ->orderBy('name')
